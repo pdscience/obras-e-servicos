@@ -1,0 +1,7 @@
+-- Adicionar campos de perfil na tabela usuarios
+
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS cpf VARCHAR(14);
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS data_nascimento DATE;
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS uf VARCHAR(2);
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS cidade VARCHAR(100);
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS endereco TEXT;

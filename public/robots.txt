@@ -1,0 +1,15 @@
+# Robots.txt for Obras & Serviços
+# https://obras-servicos.com
+
+User-agent: *
+Allow: /
+
+# Disallow admin and private pages
+Disallow: /dashboard
+Disallow: /meu-dashboard
+Disallow: /loja-dashboard
+Disallow: /login
+Disallow: /cadastro
+
+# Sitemap
+Sitemap: https://obras-servicos.com/sitemap.xml
