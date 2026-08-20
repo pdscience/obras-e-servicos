@@ -6,9 +6,9 @@
   --bg-card: #0d1117;
   --bg-raised: #161b22;
   --text-primary: #e6edf3;
-  --text-secondary: #c9d1d9;
+  --text-secondary: #b0b8c0;
   --text-muted: #8b949e;
-  --text-subtle: #484f58;
+  --text-subtle: #6e7681;
   --border-default: #21262d;
   --border-raised: #30363d;
   --accent-gold: #d4a017;
@@ -36,9 +36,9 @@
 
   /* ── Tipografia: marrom escuro, não preto frio ── */
   --text-primary: #1a1510;    /* near-black quente: máxima legibilidade */
-  --text-secondary: #2e2720;  /* conteúdo: marrom profundo */
-  --text-muted: #6b5e50;      /* secundário: terra suave */
-  --text-subtle: #9a8e80;     /* placeholders: pedra clara */
+  --text-secondary: #4a4038;  /* conteúdo: marrom médio */
+  --text-muted: #8b7e70;      /* secundário: terra média */
+  --text-subtle: #a09488;     /* placeholders: pedra clara */
 
   /* ── Bordas: calor metálico, não cinza frio ── */
   --border-default: #d4ccc0;  /* borda sutil: define sem dominar */
@@ -99,6 +99,44 @@ body {
   transition: background 0.3s ease, color 0.3s ease;
 }
 
+/* ─── App Shell: layout com menu lateral fixo ─── */
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.app-shell-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-shell-content {
+  flex: 1;
+  width: 100%;
+}
+
+.sidebar-main {
+  width: 15.5rem;
+  flex-shrink: 0;
+  align-self: flex-start;
+  display: none;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  padding: 1.5rem 1rem 1.25rem;
+  background: var(--bg-card);
+  border-right: 1px solid color-mix(in srgb, var(--accent-gold) 15%, transparent);
+  z-index: 90;
+}
+
+@media (min-width: 768px) {
+  .sidebar-main { display: flex; }
+}
+
 /* ─── Header ─── */
 .platform-header {
   background: var(--bg-card);
@@ -112,11 +150,8 @@ body {
 
 .header-content {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 10px;
+  gap: 1rem;
 }
 
 .logo-section {
@@ -378,7 +413,7 @@ body {
 /* ─── KPI Cards ─── */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1rem;
   margin-bottom: 2.5rem;
 }

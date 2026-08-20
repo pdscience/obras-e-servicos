@@ -5,6 +5,7 @@ import { useAuthStore } from './stores/auth'
 import { seedCategoriasProfissoes, migrarPlanos } from './services/api'
 import Header from './components/Header.vue'
 import Footer from './components/Footer.vue'
+import SidebarMenu from './components/SidebarMenu.vue'
 import Toast from 'primevue/toast'
 
 const auth = useAuthStore()
@@ -25,8 +26,18 @@ onMounted(() => {
 <template>
   <Toast appendTo="body" />
   <div class="palantir-platform">
-    <Header v-if="showHeaderFooter" />
-    <RouterView />
-    <Footer v-if="showHeaderFooter" />
+    <template v-if="showHeaderFooter">
+      <div class="app-shell">
+        <SidebarMenu />
+        <div class="app-shell-main">
+          <Header />
+          <main class="app-shell-content">
+            <RouterView />
+          </main>
+          <Footer />
+        </div>
+      </div>
+    </template>
+    <RouterView v-else />
   </div>
 </template>

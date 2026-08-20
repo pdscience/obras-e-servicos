@@ -1,11 +1,19 @@
 <script setup lang="ts">
 import { Check, Crown, Medal, Award, Gem } from '@lucide/vue'
 import { PLANOS_LISTA } from '../config/planos'
-import type { PlanoConfig } from '../types'
+import type { PlanoProfissional, CorPlano } from '../types'
 
-const emit = defineEmits<{
-  selectPlan: [plan: string]
-}>()
+interface PlanVisual {
+  id: PlanoProfissional
+  name: string
+  price: number
+  description: string
+  cor: CorPlano
+  features: string[]
+  cta: string
+  popular: boolean
+  icon: unknown
+}
 
 const iconMap: Record<string, unknown> = {
   bronze: Medal,
@@ -31,7 +39,7 @@ const coresPlano: Record<string, { from: string; to: string; badge: string; ring
 
 const popularId = 'ouro'
 
-const todosPlanos = PLANOS_LISTA.map(p => ({
+const todosPlanos: PlanVisual[] = PLANOS_LISTA.map(p => ({
   id: p.id,
   name: p.nome,
   price: p.preco,
@@ -43,7 +51,7 @@ const todosPlanos = PLANOS_LISTA.map(p => ({
   icon: iconMap[p.id],
 }))
 
-function planoVisual(p: PlanoConfig) {
+function planoVisual(p: PlanVisual) {
   return coresPlano[p.cor]
 }
 </script>

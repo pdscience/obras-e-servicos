@@ -131,7 +131,7 @@ export function verificarPeriodoGratis(dataInicioGratis: string | null | undefin
 
 export function obterPlanoEficaz(
   premiumPlano: PlanoProfissional | null | undefined,
-  premium: boolean | undefined,
+  _premium: boolean | undefined,
   dataInicioGratis: string | null | undefined
 ): { plano: PlanoProfissional; isGratis: boolean; diasRestantes: number } {
   const { emGratis, diasRestantes } = verificarPeriodoGratis(dataInicioGratis)

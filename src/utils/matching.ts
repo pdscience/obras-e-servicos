@@ -1,4 +1,4 @@
-import type { Professional, PerfilLojista, Produto, Review } from '../types'
+import type { Professional, PerfilLojista, Produto } from '../types'
 import { calcularDistancia } from './distance'
 
 export interface MatchScore {

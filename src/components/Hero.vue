@@ -1,16 +1,8 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
-import { Search, MapPin } from '@lucide/vue'
 import logoSrc from '../assets/logo.png'
-import { mainCategories } from '../data/mockData'
-import { ufs } from '../data/ufs'
 import { getCitiesByUf } from '../data/cities'
 
-const emit = defineEmits<{
-  search: [category: string, location: string]
-}>()
-
-const selectedCategory = ref('')
 const selectedUf = ref('')
 const selectedCity = ref('')
 
@@ -20,11 +12,6 @@ watch(selectedUf, async (val) => {
   selectedCity.value = ''
   cidades.value = await getCitiesByUf(val || null)
 })
-
-function handleSearch() {
-  const location = [selectedCity.value, selectedUf.value].filter(Boolean).join(', ')
-  emit('search', selectedCategory.value, location)
-}
 
 onMounted(() => {
   const schema = document.createElement('script')

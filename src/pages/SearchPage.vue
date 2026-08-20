@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import {
   Search, MapPin, Star, CheckCircle2, Crown,
   SlidersHorizontal, Grid3x3, List, ChevronLeft, ChevronRight
@@ -26,8 +26,8 @@ const profissionais = ref<Professional[]>(structuredClone(mockProfissionais))
 
 const {
   searchTerm, location, sortBy, filters,
-  currentPage, pageSize,
-  filteredProfessionals, paginatedResults, totalPages,
+  currentPage,
+  filteredProfessionals, totalPages,
   clearFilters: limparFiltros,
 } = useSearch(profissionais)
 
@@ -39,9 +39,8 @@ watch(location, async (val) => {
   cidades.value = await getCitiesByUf(val || null)
 })
 
-const { userLat, userLng, loading: geoLoading, error: geoError, obterLocalizacao } = useGeolocation()
+const { userLat, loading: geoLoading, error: geoError, obterLocalizacao } = useGeolocation()
 
-const showFilters = ref(false)
 const sidebarOpen = ref(false)
 const viewMode = ref<'grid' | 'list'>('grid')
 

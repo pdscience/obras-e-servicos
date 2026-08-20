@@ -1,24 +1,58 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import {
-  LayoutDashboard, ClipboardList, Clock, CheckCircle2,
-  XCircle, AlertCircle, ChevronRight, Settings, User,
-  Briefcase, DollarSign, TrendingUp, Search, ArrowRight,
-  MapPin, Calendar, MessageCircle, Star, X
+  ClipboardList, Clock, CheckCircle2,
+  User,
+  Briefcase, DollarSign, Search, ArrowRight,
+  MapPin, Calendar, MessageCircle, Star, X, Crown
 } from '@lucide/vue'
-import { listarServicosDoCliente, obterPerfilProfissionalPorId, obterPerfilUsuario, atualizarPerfilUsuario, criarPerfilUsuario, atualizarStatusServico, criarReview } from '../services/api'
+import { listarServicosDoCliente, obterPerfilProfissionalPorId, atualizarPerfilUsuario, atualizarStatusServico, criarReview, listarProfissionais, mapPerfilToProfessional, criarPerfilUsuario } from '../services/api'
 import { getCitiesByUf } from '../data/cities'
 import { useAuthStore } from '../stores/auth'
+import { useRouter } from 'vue-router'
 import SolicitarOrcamentoModal from '@/components/SolicitarOrcamentoModal.vue'
 import type { ServiceRequest, Professional } from '../types'
 
 defineEmits<{ back: [] }>()
 
 const auth = useAuthStore()
+const router = useRouter()
 const servicos = ref<ServiceRequest[]>([])
 const loading = ref(true)
 const activeTab = ref('todos')
 const profissionaisAceitos = ref<Record<string, Professional>>({})
+
+const view = ref<'profissionais' | 'pedidos'>('profissionais')
+const profissionais = ref<Professional[]>([])
+const proLoading = ref(false)
+const searchPro = ref('')
+
+const filteredProfissionais = computed(() => {
+  const term = searchPro.value.trim().toLowerCase()
+  if (!term) return profissionais.value
+  return profissionais.value.filter(p =>
+    p.name.toLowerCase().includes(term) ||
+    p.category.toLowerCase().includes(term) ||
+    p.subcategory.toLowerCase().includes(term) ||
+    p.location.toLowerCase().includes(term)
+  )
+})
+
+async function carregarProfissionais() {
+  proLoading.value = true
+  try {
+    const perfis = await listarProfissionais()
+    profissionais.value = perfis.map(mapPerfilToProfessional)
+  } catch (e) {
+    console.error('Erro ao carregar profissionais:', e)
+  } finally {
+    proLoading.value = false
+  }
+}
+
+function verPerfil(pro: Professional) {
+  router.push({ name: 'profile', params: { id: pro.id } })
+}
 
 const showEditModal = ref(false)
 const showOrcamentoModal = ref(false)
@@ -68,23 +102,6 @@ function maskCpf(v: string) {
   return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`
 }
 
-async function abrirEditarPerfil() {
-  if (!auth.user) return
-  editNome.value = auth.user.nome
-  try {
-    const perfil = await obterPerfilUsuario(auth.user.id)
-    if (perfil) {
-      editTelefone.value = perfil.telefone ?? ''
-      editCpf.value = perfil.cpf ?? ''
-      editDataNascimento.value = perfil.data_nascimento ?? ''
-      editUf.value = perfil.uf ?? ''
-      editCidade.value = perfil.cidade ?? ''
-      editEndereco.value = perfil.endereco ?? ''
-    }
-  } catch { /* sem perfil ainda */ }
-  showEditModal.value = true
-}
-
 async function salvarEdicao() {
   if (!auth.user) return
   saving.value = true
@@ -118,7 +135,7 @@ async function salvarEdicao() {
 
 function getProfissionalNome(profissionalId: string | null): string {
   if (!profissionalId) return ''
-  return profissionaisAceitos.value[profissionalId]?.nome ?? ''
+  return profissionaisAceitos.value[profissionalId]?.name ?? ''
 }
 
 async function carregar() {
@@ -151,7 +168,10 @@ watch(() => auth.user, (newUser) => {
   if (newUser) carregar()
 })
 
-onMounted(carregar)
+onMounted(() => {
+  carregar()
+  carregarProfissionais()
+})
 
 const filteredServicos = computed(() => {
   if (activeTab.value === 'todos') return servicos.value
@@ -258,14 +278,115 @@ function fecharReview() {
 <template>
   <div class="min-h-screen" style="background:var(--bg-page)">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-         <div>
-           <h1 class="text-2xl font-bold text-[var(--text-primary)]">Meus Pedidos</h1>
-           <p class="text-[var(--text-muted)]">Acompanhe seus pedidos de orçamento</p>
-         </div>
-       </div>
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div>
+          <h1 class="text-2xl font-bold text-[var(--text-primary)]">Área do Cliente</h1>
+          <p class="text-[var(--text-muted)]">{{ view === 'profissionais' ? 'Encontre profissionais disponíveis perto de você' : 'Acompanhe seus pedidos de orçamento' }}</p>
+        </div>
+        <div class="flex items-center gap-2 bg-[var(--bg-card)] border border-[var(--border-default)] rounded-xl p-1 w-fit">
+          <button
+            @click="view = 'profissionais'"
+            :class="[
+              'px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2',
+              view === 'profissionais' ? 'bg-[var(--accent-gold)] text-[var(--text-on-accent)]' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+            ]"
+          >
+            <Search class="w-4 h-4" /> Profissionais
+          </button>
+          <button
+            @click="view = 'pedidos'"
+            :class="[
+              'px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2',
+              view === 'pedidos' ? 'bg-[var(--accent-gold)] text-[var(--text-on-accent)]' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+            ]"
+          >
+            <ClipboardList class="w-4 h-4" /> Meus Pedidos
+          </button>
+        </div>
+      </div>
 
-      <div v-if="loading" class="text-center py-16">
+<!-- Profissionais disponíveis (cards) -->
+      <div v-if="view === 'profissionais'" class="space-y-5">
+        <div class="relative">
+          <Search class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-subtle)]" />
+          <input v-model="searchPro" type="text" placeholder="Buscar profissional, serviço ou cidade..."
+            class="w-full pl-12 pr-4 py-3 bg-[var(--bg-raised)] border border-[var(--border-raised)] rounded-xl text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-gold)] focus:border-transparent placeholder-[var(--text-subtle)]" />
+        </div>
+
+        <div v-if="proLoading" class="text-center py-16">
+          <div class="w-8 h-8 border-2 border-[var(--accent-gold)] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p class="text-[var(--text-muted)]">Carregando profissionais...</p>
+        </div>
+
+        <div v-else-if="filteredProfissionais.length === 0" class="text-center py-16 bg-[var(--bg-card)] border border-[var(--border-default)] rounded-xl">
+          <User class="w-16 h-16 text-[var(--border-default)] mx-auto mb-4" />
+          <h3 class="text-lg font-semibold text-[var(--text-secondary)] mb-2">Nenhum profissional encontrado</h3>
+          <p class="text-[var(--text-muted)] text-sm">Tente ajustar a busca ou volte mais tarde.</p>
+        </div>
+
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+<div
+            v-for="pro in filteredProfissionais"
+            :key="pro.id"
+            class="h-full relative bg-gradient-to-b from-[var(--bg-raised)] to-[var(--bg-card)] border border-[var(--border-raised)] rounded-2xl overflow-hidden shadow-lg hover:shadow-[color-mix(in_srgb,var(--text-muted)_7%,transparent)] transition-all duration-300 hover:-translate-y-1.5 cursor-pointer group flex flex-col"
+          >
+            <!-- Cabeçalho do card -->
+            <div class="bg-gradient-to-r from-[var(--accent-dark-gold)] to-[var(--accent-gold)] px-4 py-2 flex items-center justify-between shrink-0">
+              <div class="flex items-center gap-2 min-w-0">
+                <Star class="w-4 h-4 text-[var(--text-on-accent)] fill-[var(--text-on-accent)] shrink-0" />
+                <span class="text-[var(--text-on-accent)] text-xs font-bold uppercase tracking-wider truncate">{{ pro.category }}</span>
+              </div>
+              <span v-if="pro.premium" class="flex items-center gap-1 text-[var(--text-on-accent)] text-xs font-semibold whitespace-nowrap">
+                <Crown class="w-3.5 h-3.5" /> Premium
+              </span>
+              <span v-else class="text-[var(--text-on-accent)] text-xs font-medium opacity-70 whitespace-nowrap">Profissional</span>
+            </div>
+
+            <div class="p-5 flex flex-col flex-1">
+              <div class="flex items-start gap-4 mb-3">
+                <div class="relative">
+                  <img :src="pro.avatar" :alt="pro.name" class="w-16 h-16 rounded-full object-cover ring-2 ring-[var(--accent-gold)] ring-offset-2 ring-offset-[var(--bg-card)]" />
+                  <div v-if="pro.verified" class="absolute -bottom-1 -right-1 bg-[var(--bg-card)] rounded-full p-0.5">
+                    <CheckCircle2 class="w-5 h-5 text-[var(--accent-green)]" />
+                  </div>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <h3 class="font-semibold text-[var(--text-primary)] truncate group-hover:text-[var(--accent-gold)] transition-colors">{{ pro.name }}</h3>
+                  <p class="text-[var(--accent-gold)] text-sm font-medium truncate">{{ pro.category }}<span v-if="pro.subcategory"> · {{ pro.subcategory }}</span></p>
+                  <div class="flex items-center gap-1 mt-1">
+                    <MapPin class="w-3 h-3 text-[var(--text-subtle)] shrink-0" />
+                    <span class="text-xs text-[var(--text-subtle)] truncate">{{ pro.location }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-3 mb-3">
+                <div class="flex items-center gap-1 bg-[color-mix(in_srgb,var(--accent-amber)_10%,transparent)] px-2 py-1 rounded-lg">
+                  <Star class="w-4 h-4 text-[var(--accent-amber)] fill-[var(--accent-amber)]" />
+                  <span class="font-bold text-[var(--text-primary)] text-sm">{{ pro.rating || '0.0' }}</span>
+                  <span class="text-[var(--text-subtle)] text-xs">({{ pro.reviewCount }})</span>
+                </div>
+                <div class="text-xs text-[var(--text-subtle)]"><span class="font-medium text-[var(--text-muted)]">{{ pro.completedJobs }}</span> serv.</div>
+              </div>
+
+              <p v-if="pro.description" class="text-[var(--text-muted)] text-xs leading-relaxed line-clamp-2 mb-3">{{ pro.description }}</p>
+
+              <div class="flex flex-wrap gap-1.5 mb-4">
+                <span v-for="(spec, i) in pro.specialties.slice(0, 3)" :key="i" class="text-xs bg-[color-mix(in_srgb,var(--text-muted)_10%,transparent)] text-[var(--text-muted)] px-2 py-1 rounded-full font-medium">{{ spec }}</span>
+              </div>
+
+              <div class="mt-auto flex items-center justify-between pt-3 border-t border-[var(--border-default)]">
+                <div v-if="pro.pricePerHour > 0" class="text-xs text-[var(--text-subtle)]">R$ <span class="font-bold text-[var(--text-primary)] text-sm">{{ pro.pricePerHour }}</span>/h</div>
+                <div v-else class="text-xs text-[var(--text-subtle)]">Sob consulta</div>
+                <button @click="verPerfil(pro)" class="px-4 py-2 bg-[var(--accent-gold)] text-[var(--text-on-accent)] rounded-lg text-sm font-semibold hover:shadow-lg transition-all">
+                  Ver Perfil
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div v-else-if="loading" class="text-center py-16">
         <div class="w-8 h-8 border-2 border-[var(--accent-gold)] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
         <p class="text-[var(--text-muted)]">Carregando...</p>
       </div>

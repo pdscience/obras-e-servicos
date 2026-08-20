@@ -43,10 +43,10 @@ export const lojistas: PerfilLojista[] = [
     categorias: ['Cimento e Argamassa', 'Tintas', 'Hidráulica', 'Elétrica', 'Ferramentas'],
     endereco: 'Av. Paulista, 1000', uf: 'SP', cidade: 'São Paulo',
     lat: -23.5505, lng: -46.6333,
-    telefone_comercial: '(11) 3000-1234', site: 'https://abcmateriais.com.br',
+    telefone_comercial: '(11) 3000-1234', email: 'contato@abcmateriais.com.br', site: 'https://abcmateriais.com.br',
     social_facebook: 'https://facebook.com/abcmateriais', social_instagram: 'https://instagram.com/abc_materiais', social_youtube: 'https://youtube.com/@abcmateriais',
     horario_funcionamento: { seg_sex: '07:00-18:00', sab: '07:00-13:00' },
-    verificado: true, avaliacao_media: 4.7, total_avaliacoes: 312,
+    verificado: true, premium: false, avaliacao_media: 4.7, total_avaliacoes: 312,
     created_at: '2022-03-10T08:00:00Z', updated_at: '2026-05-01T10:00:00Z'
   }
 ];

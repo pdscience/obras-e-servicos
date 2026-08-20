@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { Briefcase, MapPin, Clock, DollarSign, AlertCircle, Calendar, ArrowRight, Search, Filter, X, User, FileText, MessageCircle } from '@lucide/vue'
+import { Briefcase, MapPin, Clock, DollarSign, AlertCircle, Calendar, Search, X, User, FileText } from '@lucide/vue'
 import { listarServicosAbertos, aceitarServico, negociarServico, obterPerfilProfissional } from '../services/api'
 import { PLANOS } from '../config/planos'
 import SolicitarOrcamentoModal from '@/components/SolicitarOrcamentoModal.vue'
-import type { ServiceRequest } from '../types'
+import type { ServiceRequest, PlanoProfissional } from '../types'
 import { useAuthStore } from '../stores/auth'
 
 const showOrcamentoModal = ref(false)
@@ -25,20 +25,10 @@ const servicos = ref<ServiceRequest[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 const searchProfissao = ref('')
-const selectedUf = ref('')
 const isProfessional = ref(false)
 const professionalCategory = ref('')
 const hasPlan = ref(false)
 const profissionalPlano = ref<string | null>(null)
-
-const ufsList = [
-  { sigla: 'AC' }, { sigla: 'AL' }, { sigla: 'AP' }, { sigla: 'AM' }, { sigla: 'BA' },
-  { sigla: 'CE' }, { sigla: 'DF' }, { sigla: 'ES' }, { sigla: 'GO' }, { sigla: 'MA' },
-  { sigla: 'MT' }, { sigla: 'MS' }, { sigla: 'MG' }, { sigla: 'PA' }, { sigla: 'PB' },
-  { sigla: 'PR' }, { sigla: 'PE' }, { sigla: 'PI' }, { sigla: 'RJ' }, { sigla: 'RN' },
-  { sigla: 'RS' }, { sigla: 'RO' }, { sigla: 'RR' }, { sigla: 'SC' }, { sigla: 'SP' },
-  { sigla: 'SE' }, { sigla: 'TO' }
-]
 
 const profissoes = computed(() => {
   const profs = new Set(servicos.value.map(s => s.subcategoria).filter(Boolean) as string[])
@@ -55,7 +45,7 @@ const filteredServicos = computed(() => {
 
 const planoNome = computed(() => {
   if (!profissionalPlano.value) return 'Gratuito'
-  return PLANOS[profissionalPlano.value]?.nome ?? 'Gratuito'
+  return PLANOS[profissionalPlano.value as PlanoProfissional]?.nome ?? 'Gratuito'
 })
 
 const urgenciaLabel = (u: string) => {

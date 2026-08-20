@@ -102,7 +102,7 @@ async function submit() {
               await salvarCategoriasProfissional(
                 perfil.id,
                 [{ categoria_id: dbCat.id, profissao_id: form.value.profissaoId }],
-                false
+                null
               )
             }
           }

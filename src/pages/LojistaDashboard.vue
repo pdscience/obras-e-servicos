@@ -11,7 +11,7 @@ import { useAuthStore } from '../stores/auth'
 import {
   obterPerfilLojista, criarPerfilLojista, atualizarPerfilLojista,
   listarProdutos, criarProduto, atualizarProduto, deletarProduto,
-  mapLojistaToPerfil
+  mapLojistaToPerfil, mapProdutoToProduto
 } from '../services/api'
 import insforge from '../services/api'
 import type { PerfilLojista, Produto } from '../types'
@@ -123,7 +123,7 @@ async function carregarProdutos() {
   if (!lojistaId.value) return
   try {
     const data = await listarProdutos(lojistaId.value)
-    produtos.value = data
+    produtos.value = data.map(mapProdutoToProduto)
   } catch (e) {
     console.error('Erro ao carregar produtos:', e)
   }

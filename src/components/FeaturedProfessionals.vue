@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { Star, MapPin, CheckCircle2, Crown, ArrowRight } from '@lucide/vue'
-import { listarProfissionais } from '../services/api'
+import { listarProfissionais, mapPerfilToProfessional } from '../services/api'
 import { rankingProfissionais } from '../utils/matching'
 import type { Professional } from '../types'
 
@@ -15,7 +15,7 @@ const featuredPros = ref<Professional[]>([])
 onMounted(async () => {
   try {
     const all = await listarProfissionais()
-    const ranked = rankingProfissionais(all, {})
+    const ranked = rankingProfissionais(all.map(mapPerfilToProfessional), {})
     featuredPros.value = ranked.slice(0, 4).map(m => m.professional)
   } catch { /* fallback vazio */ }
 })

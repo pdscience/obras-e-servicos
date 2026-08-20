@@ -1,110 +1,32 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import {
-  Menu, X, Settings,
-  ChevronDown, LogIn, Sun, Moon, User, Phone, MapPin
-} from '@lucide/vue'
+import { Menu, X, LogIn, Sun, Moon, LogOut, LayoutDashboard } from '@lucide/vue'
 import { useAuthStore } from '../stores/auth'
 import { useTheme } from '../composables/useTheme'
-import { ufs } from '../data/ufs'
-import { getCitiesByUf } from '../data/cities'
-import { listarServicosDoCliente, obterPerfilUsuario, atualizarPerfilUsuario } from '../services/api'
+import EditarPerfilModal from './EditarPerfilModal.vue'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
 const { theme, toggle: toggleTheme } = useTheme()
 const mobileMenuOpen = ref(false)
-const showUserMenu = ref(false)
 const showEditProfileModal = ref(false)
-const editNome = ref('')
-const editTelefone = ref('')
-const editCpf = ref('')
-const editDataNascimento = ref('')
-const editUf = ref('')
-const editCidade = ref('')
-const editCidades = ref<string[]>([])
-const editEndereco = ref('')
-const saving = ref(false)
-
-watch(editUf, async (newUf, oldUf) => {
-  if (newUf !== oldUf) editCidade.value = ''
-  editCidades.value = await getCitiesByUf(newUf || null)
-})
-
-function maskTelefone(v: string) {
-  const d = v.replace(/\D/g, '').slice(0, 11)
-  if (d.length <= 2) return d.length ? `(${d}` : ''
-  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`
-  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
-}
-
-function maskCpf(v: string) {
-  const d = v.replace(/\D/g, '').slice(0, 11)
-  if (d.length <= 3) return d
-  if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`
-  if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`
-  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`
-}
-
-async function abrirEditarPerfil() {
-  if (!auth.user) return
-  showUserMenu.value = false
-  editNome.value = auth.user.nome
-  editUf.value = ''
-  editCidade.value = ''
-  editCidades.value = []
-  editEndereco.value = ''
-  editCpf.value = ''
-  editDataNascimento.value = ''
-  editTelefone.value = ''
-  try {
-    const perfil = await obterPerfilUsuario(auth.user.id)
-    if (perfil) {
-      editTelefone.value = perfil.telefone ?? ''
-      editCpf.value = perfil.cpf ?? ''
-      editDataNascimento.value = perfil.data_nascimento ?? ''
-      editUf.value = perfil.uf ?? ''
-      editCidade.value = perfil.cidade ?? ''
-      editEndereco.value = perfil.endereco ?? ''
-      if (editUf.value) editCidades.value = await getCitiesByUf(editUf.value)
-    }
-  } catch { /* sem perfil ainda */ }
-  showEditProfileModal.value = true
-}
-
-async function salvarEdicao() {
-  if (!auth.user) return
-  saving.value = true
-  try {
-    await atualizarPerfilUsuario(auth.user.id, {
-      nome: editNome.value,
-      telefone: editTelefone.value,
-      cpf: editCpf.value,
-      data_nascimento: editDataNascimento.value,
-      uf: editUf.value,
-      cidade: editCidade.value,
-      endereco: editEndereco.value,
-    })
-    await auth.setProfile({ name: editNome.value })
-    showEditProfileModal.value = false
-  } catch (e) {
-    console.error('Erro ao salvar perfil:', e)
-  } finally {
-    saving.value = false
-  }
-}
 
 function handleLogout() {
   auth.logout()
-  showUserMenu.value = false
+  mobileMenuOpen.value = false
   router.push({ name: 'home' })
 }
 
 function navigate(routeName: string) {
   router.push({ name: routeName })
   mobileMenuOpen.value = false
+}
+
+function abrirEditarPerfil() {
+  mobileMenuOpen.value = false
+  showEditProfileModal.value = true
 }
 
 const navItems = computed(() => {
@@ -122,60 +44,41 @@ const navItems = computed(() => {
   return items
 })
 </script>
-
 <template>
   <header class="platform-header">
     <div class="header-content">
-      <div class="logo-section">
-        <div style="display:flex; flex-direction:column; gap:2px">
-           <div class="logo" @click="navigate('home')" style="cursor:pointer">
-             <span class="logo-text">OS - Obras &amp; Serviços</span>
-           </div>
-         </div>
+      <!-- Mobile: hamburger + logo compacto (a sidebar está oculta no mobile) -->
+      <div class="flex items-center gap-2 md:hidden">
+        <button class="p-2 text-[var(--text-muted)]" @click="mobileMenuOpen = !mobileMenuOpen" aria-label="Alternar menu">
+          <X v-if="mobileMenuOpen" class="w-6 h-6" />
+          <Menu v-else class="w-6 h-6" />
+        </button>
+        <span class="text-xl font-bold text-[var(--text-primary)]">Obras &amp; Serviços</span>
       </div>
 
-      <nav v-if="auth.currentMode !== 'profissional'" class="hidden md:flex items-center gap-6">
-        <button
-          v-for="item in navItems"
-          :key="item.id"
-          @click="navigate(item.id)"
-          :class="[
-            'text-sm font-medium transition-colors',
-            route.name === item.id ? 'text-[var(--accent-gold)]' : 'text-[var(--text-muted)] hover:text-[var(--accent-gold)]'
-          ]"
-        >
-          {{ item.label }}
-        </button>
-      </nav>
+      <div class="hidden md:flex items-center gap-2">
+        <span class="text-xl font-bold text-[var(--accent-gold)]">Obras &amp; Serviços</span>
+      </div>
 
-       <div class="hidden md:flex items-center gap-3">
+      <div class="flex-1"></div>
+
+      <!-- Actions à la derecha -->
+      <div class="flex items-center gap-3">
         <template v-if="auth.isLoggedIn">
-          <div class="relative">
-            <button
-              @click="showUserMenu = !showUserMenu"
-              class="flex items-center gap-2 p-1 hover:bg-[var(--bg-raised)] rounded-full transition-colors"
-            >
-              <div class="w-8 h-8 rounded-full bg-[var(--accent-gold)] flex items-center justify-center text-[var(--text-on-accent)] text-sm font-bold">
-                {{ auth.user?.nome?.charAt(0)?.toUpperCase() ?? 'U' }}
-              </div>
-              <ChevronDown class="w-4 h-4 text-[var(--text-muted)]" />
-            </button>
-            <div v-if="showUserMenu" class="absolute right-0 mt-2 w-56 bg-[var(--bg-card)] rounded-lg shadow-lg py-2 border border-[var(--border-raised)]">
-              <div class="px-4 py-2 text-sm text-[var(--text-muted)] border-b border-[var(--border-default)]">{{ auth.user?.nome }}</div>
-              <div v-if="auth.user" class="px-3 py-2 border-b border-[var(--border-default)]">
-                <div class="flex bg-[var(--bg-raised)] rounded-lg p-0.5">
-                  <span class="flex-1 px-2 py-1 text-xs rounded-md font-medium text-center bg-[var(--accent-gold)] text-[var(--text-on-accent)]">{{ auth.currentMode === 'cliente' ? '👤 Cliente' : auth.currentMode === 'profissional' ? '🔧 Profissional' : '🏪 Lojista' }}</span>
-                </div>
-                </div>
-
-                 <hr class="my-2 border-[var(--border-default)]" />
-              <button @click="abrirEditarPerfil" class="w-full px-4 py-2 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-raised)] flex items-center gap-2"><Settings class="w-4 h-4" /> Editar Perfil</button>
-              <button @click="navigate(auth.currentMode === 'cliente' ? 'cliente-dashboard' : 'dashboard')" class="w-full px-4 py-2 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-raised)] flex items-center gap-2">Meu Painel</button>
-              <button @click="handleLogout" class="w-full px-4 py-2 text-left text-sm text-[var(--accent-red)] hover:bg-[color-mix(in srgb,var(--accent-red) 8%,transparent)]">Sair</button>
+          <button
+            @click="abrirEditarPerfil"
+            class="relative w-9 h-9 rounded-full overflow-hidden shrink-0 ring-2 ring-[color-mix(in_srgb,var(--accent-gold)_35%,transparent)]"
+            title="Editar / configurar perfil"
+          >
+            <img v-if="auth.user?.avatar_url" :src="auth.user.avatar_url" :alt="auth.user?.nome" class="w-full h-full object-cover" />
+            <div v-else class="w-full h-full bg-gradient-to-br from-[var(--accent-gold)] to-[var(--accent-dark-gold)] flex items-center justify-center text-[var(--text-on-accent)] text-sm font-bold">
+              {{ auth.user?.nome?.charAt(0)?.toUpperCase() ?? 'U' }}
             </div>
-          </div>
-         </template>
-        <template v-else>
+            <span class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-[var(--accent-green)] border-2 border-[var(--bg-card)]"></span>
+          </button>
+        </template>
+
+        <template v-if="!auth.isLoggedIn">
           <button
             @click="navigate('login')"
             class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[var(--accent-gold)] to-[var(--accent-dark-gold)] text-[var(--text-on-accent)] rounded-lg font-medium hover:shadow-lg transition-all"
@@ -194,87 +97,78 @@ const navItems = computed(() => {
           <Sun v-if="theme === 'dark'" class="w-4 h-4" />
           <Moon v-else class="w-4 h-4" />
         </button>
-       </div>
-
-       <button
-         class="md:hidden p-2 text-[var(--text-muted)]"
-         @click="mobileMenuOpen = !mobileMenuOpen"
-       >
-        <X v-if="mobileMenuOpen" class="w-6 h-6" />
-        <Menu v-else class="w-6 h-6" />
-      </button>
+      </div>
     </div>
 
-    <div v-if="mobileMenuOpen && auth.currentMode !== 'profissional'" class="md:hidden bg-[var(--bg-card)] border-t border-[var(--border-default)]">
+    <!-- Mobile menu dropdown -->
+    <div v-if="mobileMenuOpen" class="md:hidden bg-[var(--bg-card)] border-t border-[var(--border-default)]">
       <div class="px-4 py-4 space-y-3">
-        <button
-          v-for="item in navItems"
-          :key="item.id"
-          @click="navigate(item.id)"
-          :class="[
-            'block w-full text-left px-4 py-2 rounded-lg',
-            route.name === item.id ? 'bg-[color-mix(in srgb,var(--accent-gold) 10%,transparent)] text-[var(--accent-gold)]' : 'text-[var(--text-muted)] hover:bg-[var(--bg-raised)]'
-          ]"
-        >{{ item.label }}</button>
+<!-- Apresentação do perfil (usuário conectado) -->
+        <template v-if="auth.isLoggedIn">
+          <div class="flex items-center gap-3 p-3 rounded-xl bg-[var(--bg-raised)] border border-[var(--border-default)]">
+            <button
+              class="relative w-12 h-12 rounded-full overflow-hidden ring-2 ring-[color-mix(in_srgb,var(--accent-gold)_35%,transparent)] shrink-0"
+              @click="abrirEditarPerfil"
+              :title="`Editar perfil: ${auth.user?.nome ?? ''}`"
+            >
+              <img v-if="auth.user?.avatar_url" :src="auth.user.avatar_url" :alt="auth.user?.nome" class="w-full h-full object-cover" />
+              <div v-else class="w-full h-full bg-gradient-to-br from-[var(--accent-gold)] to-[var(--accent-dark-gold)] flex items-center justify-center text-[var(--text-on-accent)] text-lg font-bold">
+                {{ auth.user?.nome?.charAt(0)?.toUpperCase() ?? 'U' }}
+              </div>
+              <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-[var(--accent-green)] border-2 border-[var(--bg-card)]"></span>
+            </button>
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-semibold text-[var(--text-primary)] truncate">{{ auth.user?.nome }}</p>
+              <p class="text-xs text-[var(--text-muted)] mt-0.5">{{ auth.currentMode === 'cliente' ? '👤 Cliente' : auth.currentMode === 'profissional' ? '🔧 Profissional' : '🏪 Lojista' }}</p>
+            </div>
+            <button
+              @click="handleLogout"
+              class="inline-flex items-center justify-center w-9 h-9 rounded-xl text-[var(--accent-red)] bg-[color-mix(in_srgb,var(--accent-red)_10%,transparent)] transition-colors"
+              title="Sair"
+            >
+              <LogOut class="w-4 h-4" />
+            </button>
+          </div>
+          <button
+            @click="navigate(auth.currentMode === 'cliente' ? 'cliente-dashboard' : 'dashboard')"
+            class="block w-full text-left px-4 py-2.5 rounded-lg bg-[color-mix(in_srgb,var(--accent-gold)_10%,transparent)] text-[var(--accent-gold)] font-medium"
+          >
+            <LayoutDashboard class="w-4 h-4 mr-2 inline-block" />
+            Meu Painel
+          </button>
+        </template>
+
+        <!-- Navegación principal -->
+        <template v-if="auth.currentMode !== 'profissional'">
+          <button
+            v-for="item in navItems"
+            :key="item.id"
+            @click="navigate(item.id)"
+            :class="[
+              'block w-full text-left px-4 py-2 rounded-lg',
+              route.name === item.id ? 'bg-[color-mix(in_srgb,var(--accent-gold)_10%,transparent)] text-[var(--accent-gold)]' : 'text-[var(--text-muted)] hover:bg-[var(--bg-raised)]'
+            ]"
+          >{{ item.label }}</button>
+        </template>
+        <template v-else-if="auth.isLoggedIn">
+          <button
+            @click="navigate('quadro-servicos')"
+            class="block w-full text-left px-4 py-2 rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-raised)]"
+          >
+            Quadro de Serviços
+          </button>
+        </template>
+
         <hr class="my-3 border-[var(--border-default)]" />
-        <button @click="navigate('login')" class="block w-full text-center px-4 py-2 bg-gradient-to-r from-[var(--accent-gold)] to-[var(--accent-dark-gold)] text-[var(--text-on-accent)] rounded-lg font-medium hover:shadow-lg transition-all">Entrar</button>
+
+        <!-- Não conectado -->
+        <template v-if="!auth.isLoggedIn">
+          <button @click="navigate('login')" class="block w-full text-center px-4 py-2 bg-gradient-to-r from-[var(--accent-gold)] to-[var(--accent-dark-gold)] text-[var(--text-on-accent)] rounded-lg font-medium hover:shadow-lg transition-all">Entrar</button>
+          <button @click="navigate('register')" class="block w-full text-center px-4 py-2 bg-[var(--bg-raised)] border border-[var(--border-raised)] text-[var(--text-secondary)] rounded-lg font-medium hover:bg-[var(--border-default)] transition-colors">Cadastre-se grátis</button>
+        </template>
       </div>
     </div>
-    </header>
+  </header>
 
-    <!-- Edit Profile Modal -->
-    <Teleport to="body">
-      <div v-if="showEditProfileModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60" @click.self="showEditProfileModal = false">
-        <div class="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-xl p-6 w-full max-w-lg mx-4 shadow-2xl">
-          <div class="flex items-center justify-between mb-6">
-            <h2 class="text-xl font-bold text-[var(--text-primary)]">Editar Perfil</h2>
-            <button @click="showEditProfileModal = false" class="p-1 hover:bg-[var(--border-default)] rounded-lg transition-colors text-[var(--text-muted)]">✕</button>
-          </div>
-          <div class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-[var(--text-muted)] mb-2">Nome</label>
-              <input v-model="editNome" type="text" class="w-full px-4 py-3 bg-[var(--bg-raised)] border border-[var(--border-raised)] rounded-xl text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-gold)] placeholder-[var(--text-subtle)]" />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-[var(--text-muted)] mb-2">Telefone</label>
-              <input :value="editTelefone" @input="editTelefone = maskTelefone(($event.target as HTMLInputElement).value)" type="tel" placeholder="(11) 99999-9999" maxlength="15" class="w-full px-4 py-3 bg-[var(--bg-raised)] border border-[var(--border-raised)] rounded-xl text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-gold)] placeholder-[var(--text-subtle)]" />
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-[var(--text-muted)] mb-2">CPF</label>
-                <input :value="editCpf" @input="editCpf = maskCpf(($event.target as HTMLInputElement).value)" type="text" placeholder="000.000.000-00" maxlength="14" class="w-full px-4 py-3 bg-[var(--bg-raised)] border border-[var(--border-raised)] rounded-xl text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-gold)] placeholder-[var(--text-subtle)]" />
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-[var(--text-muted)] mb-2">Data de Nascimento</label>
-                <input v-model="editDataNascimento" type="date" class="w-full px-4 py-3 bg-[var(--bg-raised)] border border-[var(--border-raised)] rounded-xl text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-gold)]" />
-              </div>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-[var(--text-muted)] mb-2">UF</label>
-                <select v-model="editUf" class="w-full px-4 py-3 bg-[var(--bg-raised)] border border-[var(--border-raised)] rounded-xl text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-gold)] appearance-none cursor-pointer">
-                  <option value="">Selecione</option>
-                  <option v-for="uf in ufs" :key="uf.sigla" :value="uf.sigla">{{ uf.sigla }} - {{ uf.nome }}</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-[var(--text-muted)] mb-2">Cidade</label>
-                <select v-model="editCidade" class="w-full px-4 py-3 bg-[var(--bg-raised)] border border-[var(--border-raised)] rounded-xl text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-gold)]">
-                  <option value="">Selecione a cidade</option>
-                  <option v-for="cid in editCidades" :key="cid" :value="cid">{{ cid }}</option>
-                </select>
-              </div>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-[var(--text-muted)] mb-2">Endereço</label>
-              <input v-model="editEndereco" placeholder="Rua, número, bairro" class="w-full px-4 py-3 bg-[var(--bg-raised)] border border-[var(--border-raised)] rounded-xl text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-gold)] placeholder-[var(--text-subtle)]" />
-            </div>
-          </div>
-          <div class="flex gap-3 mt-6">
-            <button @click="showEditProfileModal = false" class="flex-1 py-3 bg-[var(--bg-raised)] border border-[var(--border-raised)] text-[var(--text-muted)] rounded-xl hover:bg-[var(--border-default)] transition-colors">Cancelar</button>
-            <button @click="salvarEdicao" :disabled="saving" class="flex-1 py-3 bg-[var(--accent-gold)] text-[var(--text-on-accent)] font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50">{{ saving ? 'Salvando...' : 'Salvar' }}</button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
-  </template>
+  <EditarPerfilModal :visible="showEditProfileModal" @close="showEditProfileModal = false" />
+</template>

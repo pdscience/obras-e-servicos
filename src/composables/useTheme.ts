@@ -2,7 +2,7 @@ import { ref } from 'vue'
 
 export type Theme = 'dark' | 'light'
 
-const theme = ref<Theme>('dark')
+const theme = ref<Theme>('light')
 let initialized = false
 
 function apply(t: Theme) {
@@ -15,7 +15,7 @@ export function useTheme() {
   if (!initialized) {
     initialized = true
     const saved = localStorage.getItem('os-theme') as Theme | null
-    apply(saved === 'dark' || saved === 'light' ? saved : 'dark')
+    apply(saved === 'dark' || saved === 'light' ? saved : 'light')
   }
   return { theme, toggle: () => apply(theme.value === 'dark' ? 'light' : 'dark'), setTheme: apply }
 }

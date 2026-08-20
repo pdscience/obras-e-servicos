@@ -3,7 +3,7 @@ import { computed, ref, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   Store, MapPin, Star, CheckCircle2, ExternalLink, ChevronRight,
-  Phone, Globe, Clock, Tag, X, Filter, Search
+  Phone, Globe, Clock, Tag, X, Filter
 } from '@lucide/vue'
 import { listarLojistas, mapLojistaToPerfil, listarCategorias } from '../services/api'
 import { ufs } from '../data/ufs'

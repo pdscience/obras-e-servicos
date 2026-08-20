@@ -2,12 +2,12 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import {
   LayoutDashboard, Briefcase, MessageCircle, Star, Settings,
-  Calendar, TrendingUp, DollarSign, Clock,
-  CheckCircle2, XCircle, AlertCircle, ChevronRight,
-  MoreVertical, Eye, MessageSquare, Crown, Camera,
+  Calendar, DollarSign, Clock,
+  CheckCircle2, XCircle, AlertCircle,
+  Eye, Crown, Camera,
   Search, MapPin, User, X, Shield
 } from '@lucide/vue'
-import insforge, { listarServicosDoProfissional, listarServicosAbertos, aceitarServico, concluirServico, cancelarServico, negociarServico, atualizarStatusServico, obterPerfilProfissional, criarPerfilProfissional, atualizarPerfilProfissional, obterPerfilUsuario, atualizarPerfilUsuario, listarReviews, ativarPremium, listarCategorias, listarProfissoes, listarTodasProfissoes, listarCategoriasProfissional, salvarCategoriasProfissional, uploadPortfolioImage } from '../services/api'
+import insforge, { listarServicosDoProfissional, listarServicosAbertos, concluirServico, cancelarServico, negociarServico, obterPerfilProfissional, criarPerfilProfissional, atualizarPerfilProfissional, obterPerfilUsuario, atualizarPerfilUsuario, listarReviews, ativarPremium, listarCategorias, listarTodasProfissoes, listarCategoriasProfissional, salvarCategoriasProfissional, uploadPortfolioImage } from '../services/api'
 import { getCitiesByUf } from '../data/cities'
 import type { ServiceRequest, CategoriaDB, ProfissaoDB, ProfissionalCategoriaView, PlanoProfissional, PortfolioItem } from '../types'
 import { PLANOS_PROFISSIONAIS, limiteCategoriasPlano, limiteFotosPlano, PLANOS, obterPlanoEficaz } from '../config/planos'
@@ -87,7 +87,6 @@ watch(editUf, async (newUf, oldUf) => {
   editCidades.value = await getCitiesByUf(newUf)
 })
 
-const editCategoria = ref('')
 const editDescricao = ref('')
 const editCertificacoes = ref('')
 const editAnosExperiencia = ref(0)
@@ -100,7 +99,6 @@ const profissoesDB = ref<ProfissaoDB[]>([])
 const editCategorias = ref<ProfissionalCategoriaView[]>([])
 const editPortfolio = ref<PortfolioItem[]>([])
 const selectedProfissaoId = ref('')
-const addingCategoria = ref(false)
 
 function handlePortfolioUpload() {
   const input = document.createElement('input')
@@ -207,7 +205,7 @@ function buildPro() {
 }
 const pro = computed(buildPro)
 
-function nomePlano(p: PlanoProfissional | null | undefined): string {
+function nomePlano(): string {
   return PLANOS[planoEficaz.value.plano].nome
 }
 
@@ -366,15 +364,6 @@ async function carregar() {
     }
   } finally {
     loading.value = false
-  }
-}
-
-async function handleAceitar(servicoId: string) {
-  try {
-    await aceitarServico(servicoId, pro.value.id)
-    await carregar()
-  } catch (e: unknown) {
-    alert((e as Error).message)
   }
 }
 
@@ -621,7 +610,7 @@ onMounted(carregar)
         </div>
         <!-- Plano Pago Ativo -->
         <div v-else-if="pro.premium && !premiumExpirado" class="bg-[var(--accent-green)] rounded-xl p-4 text-white">
-          <h4 class="font-semibold mb-1 flex items-center gap-2"><Crown class="w-4 h-4" />Plano {{ nomePlano(proPremiumPlano) }}</h4>
+          <h4 class="font-semibold mb-1 flex items-center gap-2"><Crown class="w-4 h-4" />Plano {{ nomePlano() }}</h4>
           <p class="text-white/70 text-xs mb-1">Seu perfil está em destaque!</p>
           <p v-if="premiumDiasRestantes > 0" class="text-white/80 text-xs">Restam {{ premiumDiasRestantes }} dias</p>
           <p v-else class="text-white/80 text-xs">Expirado — faça um novo plano</p>
@@ -651,14 +640,14 @@ onMounted(carregar)
       <template v-else>
         <!-- Overview -->
         <template v-if="activeTab === 'overview'">
-          <div class="kpi-grid">
+          <div class="kpi-grid max-w-5xl px-4 sm:px-6 lg:px-8">
           <div v-for="(stat, i) in stats" :key="i" class="kpi-card" :style="{ borderLeftColor: stat.color }">
             <component :is="stat.icon" class="kpi-icon" :style="{ color: stat.color }" />
             <div class="kpi-content"><h3>{{ stat.value }}</h3><p>{{ stat.label }}</p></div>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-5xl px-4 sm:px-6 lg:px-8">
           <div class="lg:col-span-2 bg-[var(--bg-card)] border border-[var(--border-default)] rounded-xl shadow-sm">
             <div class="p-5 border-b border-[var(--border-default)] flex items-center justify-between">
               <h2 class="font-semibold text-[var(--text-secondary)]">Meus Serviços</h2>
