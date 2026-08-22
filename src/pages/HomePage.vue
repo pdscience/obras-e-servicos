@@ -2,6 +2,8 @@
 import { ref } from 'vue'
 import { useHead } from '@vueuse/head'
 import Hero from '@/components/Hero.vue'
+import StatsBar from '@/components/StatsBar.vue'
+import AudienceSection from '@/components/AudienceSection.vue'
 import HowItWorks from '@/components/HowItWorks.vue'
 import Categories from '@/components/Categories.vue'
 import LojasProximas from '@/components/LojasProximas.vue'
@@ -60,6 +62,14 @@ function handleRequestLogin() {
   router.push({ name: 'auth' })
 }
 
+function handleAudienceRegister(type: 'cliente' | 'professional' | 'lojista') {
+  router.push({ name: 'register', query: { tipo: type } })
+}
+
+function handleHeroRegister() {
+  router.push({ name: 'register' })
+}
+
 function handleRegisterPlan(plano: string) {
   if (plano === 'diamante') {
     router.push({ name: 'register', query: { tipo: 'lojista' } })
@@ -79,7 +89,9 @@ function handleOrcamentoCreated() {
 </script>
 
 <template>
-  <Hero @search="handleSearch" />
+  <Hero @search="handleSearch" @register="handleHeroRegister" />
+  <StatsBar />
+  <AudienceSection @register="handleAudienceRegister" />
   <HowItWorks />
   <Categories compact :maxItems="8" @mainCategorySelect="handleMainCategorySelect" />
   <div class="pb-16" style="background:var(--bg-page)">

@@ -5,8 +5,8 @@ import logo from '@/assets/logo.png'
 
 <template>
   <footer class="bg-[var(--bg-surface)] border-t border-[var(--border-default)]">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
-      <div class="rounded-2xl bg-[var(--bg-raised)] border border-[var(--border-default)] p-8 md:p-10 shadow-sm">
+    <div class="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div class="rounded-2xl bg-[var(--bg-raised)] border border-[var(--border-default)] px-6 py-8 md:px-10 shadow-sm">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
           <div class="flex items-center gap-3">
             <img :src="logo" alt="Obras & Serviços" class="h-16 w-auto" />
@@ -51,6 +51,15 @@ import logo from '@/assets/logo.png'
 
       <div class="mt-6">
         <p class="text-center text-[var(--text-subtle)] text-sm">© 2026 Obras &amp; Serviços. Todos os direitos reservados.</p>
+      </div>
+
+      <div class="mt-6 pt-5 border-t border-[var(--border-default)] flex flex-col sm:flex-row items-center justify-center sm:justify-between gap-3 text-xs text-[var(--text-subtle)]">
+        <span class="flex items-center gap-4">
+          <a href="#" class="hover:text-[var(--accent-gold)] transition-colors">Termos de Uso</a>
+          <a href="#" class="hover:text-[var(--accent-gold)] transition-colors">Política de Privacidade</a>
+          <a href="#" class="hover:text-[var(--accent-gold)] transition-colors">Cookies</a>
+        </span>
+        <span>Feito no Brasil</span>
       </div>
     </div>
   </footer>

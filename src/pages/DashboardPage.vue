@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import {
-  LayoutDashboard, Briefcase, MessageCircle, Star, Settings,
+  Briefcase, MessageCircle, Star,
   Calendar, DollarSign, Clock,
   CheckCircle2, XCircle, AlertCircle,
   Eye, Crown, Camera,
@@ -205,10 +205,6 @@ function buildPro() {
 }
 const pro = computed(buildPro)
 
-function nomePlano(): string {
-  return PLANOS[planoEficaz.value.plano].nome
-}
-
 const stats = computed(() => {
   const pendentes = meusServicos.value.filter(s => s.status === 'aberto' || s.status === 'em_andamento').length
   const concluidos = meusServicos.value.filter(s => s.status === 'concluido').length
@@ -222,14 +218,6 @@ const stats = computed(() => {
     { label: 'Faturamento', value: `R$ ${faturamento.toLocaleString('pt-BR')}`, change: '', icon: DollarSign, color: '#7ee8fa' }
   ]
 })
-
-const menuItems = computed(() => [
-  { id: 'overview', label: 'Visão Geral', icon: LayoutDashboard },
-  { id: 'requests', label: 'Meus Pedidos', icon: Briefcase, badge: meusServicos.value.filter(s => s.status === 'aberto' || s.status === 'em_andamento').length || undefined },
-  { id: 'job-board', label: 'Quadro de Serviços', icon: Briefcase },
-  { id: 'reviews', label: 'Avaliações', icon: Star },
-  { id: 'settings', label: 'Configurações', icon: Settings }
-])
 
 function getStatusBadge(status: string) {
   const styles: Record<string, string> = {
@@ -570,67 +558,42 @@ onMounted(carregar)
 
 <template>
   <div class="min-h-screen" style="background:var(--bg-page)">
-    <aside class="fixed left-0 top-16 w-64 h-[calc(100vh-4rem)] bg-[var(--bg-card)] border-r border-[var(--border-default)] hidden lg:block">
-      <div class="p-4">
-        <div class="flex items-center gap-3 p-3 bg-[var(--bg-raised)] rounded-xl mb-6">
-          <div class="relative group cursor-pointer" @click="handleAvatarUpload">
-            <img :src="pro.avatar" :alt="pro.name" class="w-12 h-12 rounded-full object-cover" />
-            <div class="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <Camera class="w-5 h-5 text-white" />
+    <main class="px-4 sm:px-6 lg:px-8 py-6">
+      <div class="relative overflow-hidden rounded-2xl mb-8 p-6 md:p-8" style="background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-raised) 100%); border: 1px solid var(--border-default);">
+        <div class="absolute -top-16 -right-16 w-64 h-64 rounded-full blur-3xl opacity-20" style="background: var(--accent-gold)"></div>
+        <div class="absolute -bottom-20 -left-10 w-48 h-48 rounded-full blur-3xl opacity-10" style="background: var(--accent-teal)"></div>
+        <div class="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div class="flex items-center gap-4">
+            <div class="relative hidden sm:block">
+              <img :src="pro.avatar" :alt="pro.name" class="w-16 h-16 rounded-2xl object-cover ring-2 ring-[var(--accent-gold)] ring-offset-2 ring-offset-[var(--bg-card)]" />
+              <span v-if="pro.premium && !premiumExpirado" class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[var(--accent-gold)] flex items-center justify-center"><Crown class="w-3.5 h-3.5 text-[var(--text-on-accent)]" /></span>
+            </div>
+            <div>
+              <div class="flex flex-wrap items-center gap-2 mb-1">
+                <h1 class="text-2xl md:text-3xl font-bold text-[var(--text-primary)]">Bem-vindo, {{ pro.name.split(' ')[0] }}!</h1>
+                <template v-if="emPeriodoGratis">
+                  <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold" style="background: color-mix(in srgb, var(--accent-green) 15%, transparent); color: var(--accent-green);"><Crown class="w-3 h-3" /> Período Gratuito</span>
+                </template>
+                <template v-else-if="pro.premium && !premiumExpirado">
+                  <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold" style="background: color-mix(in srgb, var(--accent-gold) 15%, transparent); color: var(--accent-gold);"><Crown class="w-3 h-3" /> {{ PLANOS[planoEficaz.plano].nome }}</span>
+                </template>
+              </div>
+              <p class="text-[var(--text-muted)]">Aqui está o resumo da sua atividade.</p>
             </div>
           </div>
-          <div class="flex-1 min-w-0">
-            <p class="font-semibold text-[var(--text-secondary)] truncate">{{ pro.name }}</p>
-            <p v-if="pro.premium && !premiumExpirado" class="text-xs text-[var(--accent-gold)]">Plano {{ PLANOS[planoEficaz.plano].nome }}</p>
-            <p v-else-if="emPeriodoGratis" class="text-xs text-[var(--accent-green)]">Período Gratuito</p>
+          <div v-if="meusServicos.length > 0" class="flex items-center gap-5 px-5 py-3 rounded-xl" style="background: color-mix(in srgb, var(--bg-page) 60%, transparent); border: 1px solid var(--border-default);">
+            <div class="text-center">
+              <p class="text-xl font-bold text-[var(--accent-gold)] font-['JetBrains_Mono',monospace]">{{ stats[1].value }}</p>
+              <p class="text-xs text-[var(--text-muted)]">Concluídos</p>
+            </div>
+            <div class="w-px h-8 bg-[var(--border-default)]"></div>
+            <div class="text-center">
+              <p class="text-xl font-bold text-[var(--text-primary)] font-['JetBrains_Mono',monospace]">{{ stats[0].value }}</p>
+              <p class="text-xs text-[var(--text-muted)]">Ativos</p>
+            </div>
           </div>
         </div>
-        <nav class="space-y-1">
-          <button v-for="item in menuItems" :key="item.id" @click="activeTab = item.id" :class="['w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors', activeTab === item.id ? 'bg-[color-mix(in srgb,var(--accent-gold) 10%,transparent)] text-[var(--accent-gold)]' : 'text-[var(--text-muted)] hover:bg-[var(--bg-raised)]']">
-            <div class="flex items-center gap-3"><component :is="item.icon" class="w-5 h-5" /><span class="font-medium">{{ item.label }}</span></div>
-            <span v-if="item.badge" class="w-5 h-5 bg-[var(--accent-gold)] text-[var(--text-on-accent)] text-xs rounded-full flex items-center justify-center">{{ item.badge }}</span>
-          </button>
-        </nav>
       </div>
-      <div class="absolute bottom-4 left-4 right-4">
-        <!-- Período Gratuito Ativo -->
-        <div v-if="emPeriodoGratis" class="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-4 text-white">
-          <h4 class="font-semibold mb-1 flex items-center gap-2"><Crown class="w-4 h-4" />Plano Ouro - Gratuito</h4>
-          <p class="text-white/80 text-xs mb-2">{{ textoDiasRestantes }}</p>
-          <div class="w-full bg-white/20 rounded-full h-2 mb-2">
-            <div class="bg-white rounded-full h-2 transition-all" :style="{ width: percentualRestante + '%' }"></div>
-          </div>
-          <p class="text-white/70 text-xs">Após 60 dias, escolha um plano pago.</p>
-        </div>
-        <!-- Período Gratuito Expirado -->
-        <div v-else-if="periodoGratisExpirado" class="bg-gradient-to-r from-orange-500 to-red-500 rounded-xl p-4 text-white">
-          <h4 class="font-semibold mb-1 flex items-center gap-2"><AlertCircle class="w-4 h-4" />Período Gratuito Expirado</h4>
-          <p class="text-white/80 text-sm mb-3">Seu período de 60 dias gratuitos expirou. Escolha um plano para continuar com destaque.</p>
-          <button @click="showPlansModal = true" class="w-full py-2 bg-white text-orange-600 font-semibold rounded-lg text-sm hover:bg-gray-100 transition-colors">Escolher Plano</button>
-        </div>
-        <!-- Plano Pago Ativo -->
-        <div v-else-if="pro.premium && !premiumExpirado" class="bg-[var(--accent-green)] rounded-xl p-4 text-white">
-          <h4 class="font-semibold mb-1 flex items-center gap-2"><Crown class="w-4 h-4" />Plano {{ nomePlano() }}</h4>
-          <p class="text-white/70 text-xs mb-1">Seu perfil está em destaque!</p>
-          <p v-if="premiumDiasRestantes > 0" class="text-white/80 text-xs">Restam {{ premiumDiasRestantes }} dias</p>
-          <p v-else class="text-white/80 text-xs">Expirado — faça um novo plano</p>
-        </div>
-        <!-- Sem Plano -->
-        <div v-else class="bg-[var(--accent-gold)] rounded-xl p-4 text-[var(--text-on-accent)]">
-          <h4 class="font-semibold mb-1">Aumente sua Visibilidade</h4>
-          <p class="text-[var(--text-on-accent)]/70 text-sm mb-3">Assine Ouro ou superior e receba 3x mais clientes</p>
-          <button @click="showPlansModal = true" class="w-full py-2 bg-white text-[var(--text-on-accent)] font-medium rounded-lg text-sm hover:bg-[var(--bg-page)] transition-colors">Ver Planos</button>
-        </div>
-      </div>
-    </aside>
-
-    <main class="lg:ml-64 p-6">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-         <div>
-           <h1 class="text-2xl font-bold text-[var(--text-primary)]">Bem-vindo, {{ pro.name.split(' ')[0] }}!</h1>
-           <p class="text-[var(--text-muted)]">Aqui está o resumo da sua atividade</p>
-         </div>
-       </div>
 
       <div v-if="loading" class="text-center py-16">
         <div class="w-8 h-8 border-2 border-[var(--accent-gold)] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
@@ -640,59 +603,76 @@ onMounted(carregar)
       <template v-else>
         <!-- Overview -->
         <template v-if="activeTab === 'overview'">
-          <div class="kpi-grid max-w-5xl px-4 sm:px-6 lg:px-8">
-          <div v-for="(stat, i) in stats" :key="i" class="kpi-card" :style="{ borderLeftColor: stat.color }">
-            <component :is="stat.icon" class="kpi-icon" :style="{ color: stat.color }" />
-            <div class="kpi-content"><h3>{{ stat.value }}</h3><p>{{ stat.label }}</p></div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+            <div
+              v-for="(stat, i) in stats"
+              :key="i"
+              class="group relative overflow-hidden bg-[var(--bg-card)] border border-[var(--border-default)] rounded-2xl p-5 hover:-translate-y-1 hover:border-[color-mix(in_srgb,var(--accent-gold)_25%,transparent)] hover:shadow-lg transition-all duration-300"
+            >
+              <div class="absolute -top-10 -right-10 w-24 h-24 rounded-full blur-2xl opacity-0 group-hover:opacity-20 transition-opacity duration-500" :style="{ background: stat.color }"></div>
+              <div class="flex items-center gap-4 relative z-10">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" :style="{ background: stat.color + '18' }">
+                  <component :is="stat.icon" class="w-6 h-6" :style="{ color: stat.color }" />
+                </div>
+                <div class="min-w-0">
+                  <h3 class="text-xl font-bold text-[var(--text-primary)] font-['JetBrains_Mono',monospace] truncate">{{ stat.value }}</h3>
+                  <p class="text-xs text-[var(--text-muted)]">{{ stat.label }}</p>
+                </div>
+              </div>
+              <div class="mt-4 h-0.5 w-full rounded-full opacity-40" :style="{ background: `linear-gradient(90deg, ${stat.color} 0%, transparent 100%)` }"></div>
+            </div>
           </div>
-        </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-5xl px-4 sm:px-6 lg:px-8">
-          <div class="lg:col-span-2 bg-[var(--bg-card)] border border-[var(--border-default)] rounded-xl shadow-sm">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 bg-[var(--bg-card)] border border-[var(--border-default)] rounded-2xl shadow-sm overflow-hidden">
             <div class="p-5 border-b border-[var(--border-default)] flex items-center justify-between">
               <h2 class="font-semibold text-[var(--text-secondary)]">Meus Serviços</h2>
               <button class="text-[var(--accent-gold)] text-sm font-medium hover:text-[var(--accent-teal)]">Ver Todos</button>
             </div>
-            <div v-if="meusServicos.length === 0" class="p-8 text-center">
-              <p class="text-[var(--text-subtle)]">Nenhum serviço ainda. Os serviços aparecerão aqui quando você aceitar.</p>
+            <div v-if="meusServicos.length === 0" class="p-10 text-center">
+              <div class="w-14 h-14 mx-auto mb-4 rounded-2xl bg-[var(--bg-raised)] flex items-center justify-center">
+                <Briefcase class="w-7 h-7 text-[var(--text-subtle)]" />
+              </div>
+              <p class="text-[var(--text-muted)] font-medium">Nenhum serviço ainda.</p>
+              <p class="text-[var(--text-subtle)] text-sm mt-1">Os serviços aparecerão aqui quando você aceitar.</p>
             </div>
             <div v-else class="divide-y divide-[var(--border-default)]">
-              <div v-for="servico in meusServicos" :key="servico.id" class="p-5 hover:bg-[var(--bg-raised)] transition-colors">
+              <div v-for="servico in meusServicos" :key="servico.id" class="p-5 hover:bg-[var(--bg-raised)]/60 transition-colors">
                 <div class="flex items-start justify-between gap-4">
                   <div class="flex items-start gap-3">
-                    <div class="w-10 h-10 rounded-full bg-[color-mix(in srgb,var(--accent-gold) 10%,transparent)] flex items-center justify-center shrink-0">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--accent-gold)]/20 to-[var(--accent-gold)]/5 flex items-center justify-center shrink-0 ring-1 ring-[var(--accent-gold)]/15">
                       <span class="text-[var(--accent-gold)] font-bold text-sm">{{ servico.cliente_nome.charAt(0) }}</span>
                     </div>
                     <div>
                       <div class="flex items-center gap-2 mb-1">
-                        <h3 class="font-medium text-[var(--text-secondary)]">{{ servico.cliente_nome }}</h3>
+                        <h3 class="font-semibold text-[var(--text-secondary)]">{{ servico.cliente_nome }}</h3>
                         <span :class="['px-2 py-1 rounded-full text-xs font-medium', getStatusBadge(servico.status).style]">{{ getStatusBadge(servico.status).label }}</span>
                       </div>
                       <p class="text-sm text-[var(--text-muted)]">{{ servico.descricao.slice(0, 80) }}{{ servico.descricao.length > 80 ? '...' : '' }}</p>
-                      <p class="text-sm text-white mt-1">{{ servico.endereco }} • {{ new Date(servico.created_at).toLocaleDateString('pt-BR') }}</p>
+                      <p class="text-sm text-[var(--text-subtle)] mt-1">{{ servico.endereco }} • {{ new Date(servico.created_at).toLocaleDateString('pt-BR') }}</p>
                     </div>
                   </div>
                   <div class="text-right shrink-0">
-                    <p v-if="servico.orcamento" class="font-semibold text-[var(--text-primary)]">R$ {{ servico.orcamento.toLocaleString('pt-BR') }}</p>
+                    <p v-if="servico.orcamento" class="font-semibold font-mono text-[var(--text-primary)]">R$ {{ servico.orcamento.toLocaleString('pt-BR') }}</p>
                     <div class="flex items-center gap-1 mt-2">
                       <button
                         v-if="servico.status === 'aberto'"
                         @click="abrirNegociacao(servico.id)"
-                        class="px-3 py-1.5 bg-[var(--accent-gold)] text-[var(--text-on-accent)] text-xs rounded-lg font-medium hover:bg-[color-mix(in_srgb,var(--accent-gold)_85%,black)]"
+                        class="px-3 py-1.5 bg-[var(--accent-gold)] text-[var(--text-on-accent)] text-xs rounded-lg font-medium hover:bg-[var(--accent-dark-gold)] transition-colors"
                       >
                         Negociar
                       </button>
                       <button
                         v-if="servico.status === 'em_andamento'"
                         @click="handleConcluir(servico.id)"
-                        class="px-3 py-1.5 bg-[var(--accent-green)] text-[var(--text-on-accent)] text-xs rounded-lg font-medium hover:bg-[color-mix(in_srgb,var(--accent-green)_85%,black)]"
+                        class="px-3 py-1.5 bg-[var(--accent-green)] text-[var(--text-on-accent)] text-xs rounded-lg font-medium hover:opacity-90 transition-colors"
                       >
                         Concluir
                       </button>
                       <button
                         v-if="servico.status === 'aberto' || servico.status === 'em_andamento'"
                         @click="handleCancelar(servico.id)"
-                        class="p-1.5 hover:bg-[var(--border-default)] rounded transition-colors"
+                        class="p-1.5 hover:bg-[var(--accent-red)]/10 rounded-lg transition-colors"
                         title="Cancelar"
                       >
                         <XCircle class="w-4 h-4 text-[var(--accent-red)]" />
@@ -704,31 +684,31 @@ onMounted(carregar)
             </div>
           </div>
 
-          <div class="space-y-6">
-            <div class="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-xl shadow-sm">
+          <div class="lg:col-span-1 space-y-6">
+            <div class="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-2xl shadow-sm overflow-hidden">
               <div class="p-5 border-b border-[var(--border-default)] flex items-center justify-between">
                 <h2 class="font-semibold text-[var(--text-secondary)]">Serviços Disponíveis</h2>
-                <span class="text-xs text-[var(--accent-gold)]">{{ servicosAbertos.length }} abertos</span>
+                <span class="px-2.5 py-0.5 text-xs font-semibold rounded-full" style="background: color-mix(in srgb, var(--accent-gold) 12%, transparent); color: var(--accent-gold);">{{ servicosAbertos.length }} abertos</span>
               </div>
               <div class="p-5 space-y-3">
                 <div v-if="servicosAbertos.length === 0" class="text-center py-4">
                   <p class="text-[var(--text-subtle)] text-sm">Nenhum serviço disponível no momento</p>
                 </div>
-                <div v-for="servico in servicosAbertos.slice(0, 3)" :key="servico.id" class="flex items-start gap-3 p-3 bg-[var(--bg-raised)] rounded-lg">
+                <div v-for="servico in servicosAbertos.slice(0, 3)" :key="servico.id" class="flex items-start gap-3 p-3 bg-[var(--bg-raised)] rounded-xl border border-[var(--border-default)] hover:border-[var(--accent-gold)]/30 transition-colors">
                   <div class="w-10 h-10 bg-[color-mix(in srgb,var(--accent-gold) 10%,transparent)] rounded-lg flex items-center justify-center flex-shrink-0">
                     <Briefcase class="w-5 h-5 text-[var(--accent-gold)]" />
                   </div>
                   <div class="flex-1 min-w-0">
                     <h4 class="font-medium text-[var(--text-secondary)] text-sm truncate">{{ servico.descricao.slice(0, 50) }}{{ servico.descricao.length > 50 ? '...' : '' }}</h4>
                     <p class="text-xs text-[var(--text-muted)]">{{ servico.cliente_nome }} • {{ servico.endereco.split(',')[0] }}</p>
-                    <p v-if="servico.orcamento" class="text-xs text-[var(--accent-green)] mt-1">R$ {{ servico.orcamento.toLocaleString('pt-BR') }}</p>
+                    <p v-if="servico.orcamento" class="text-xs text-[var(--accent-green)] mt-1 font-medium">R$ {{ servico.orcamento.toLocaleString('pt-BR') }}</p>
                   </div>
-                  <button @click="abrirNegociacao(servico.id)" class="px-2.5 py-1 bg-[var(--accent-gold)] text-[var(--text-on-accent)] text-xs rounded-lg font-medium whitespace-nowrap hover:bg-[var(--accent-dark-gold)]">Negociar</button>
+                  <button @click="abrirNegociacao(servico.id)" class="px-2.5 py-1 bg-[var(--accent-gold)] text-[var(--text-on-accent)] text-xs rounded-lg font-medium whitespace-nowrap hover:bg-[var(--accent-dark-gold)] transition-colors">Negociar</button>
                 </div>
               </div>
             </div>
 
-            <div class="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-xl shadow-sm p-5">
+            <div class="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-2xl shadow-sm p-5">
               <h2 class="font-semibold text-[var(--text-secondary)] mb-4">Resumo</h2>
               <div class="space-y-4">
                 <div v-for="(item, i) in monthlyStats" :key="i" class="flex items-center justify-between">
@@ -736,21 +716,21 @@ onMounted(carregar)
                     <div class="w-8 h-8 rounded-lg flex items-center justify-center" :style="{ background: item.color + '18' }"><component :is="item.icon" class="w-4 h-4" :style="{ color: item.color }" /></div>
                     <span class="text-sm text-[var(--text-muted)]">{{ item.label }}</span>
                   </div>
-                  <span class="font-semibold text-[var(--text-primary)]">{{ item.value }}</span>
+                  <span class="font-semibold text-[var(--text-primary)] font-mono">{{ item.value }}</span>
                 </div>
               </div>
             </div>
 
-            <div v-if="ultimaReview" class="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-xl shadow-sm">
+            <div v-if="ultimaReview" class="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-2xl shadow-sm overflow-hidden">
               <div class="p-5 border-b border-[var(--border-default)] flex items-center justify-between">
                 <h2 class="font-semibold text-[var(--text-secondary)]">Última Avaliação</h2>
-                <div class="flex items-center gap-1"><Star class="w-4 h-4 text-[var(--accent-amber)] fill-[var(--accent-amber)]" /><span class="font-semibold text-[var(--text-primary)]">{{ pro.rating }}</span></div>
+                <div class="flex items-center gap-1"><Star class="w-4 h-4 text-[var(--accent-amber)] fill-[var(--accent-amber)]" /><span class="font-semibold text-[var(--text-primary)] font-mono">{{ pro.rating }}</span></div>
               </div>
               <div class="p-5">
                 <div class="flex items-start gap-3">
-                  <img :src="ultimaReview.clientAvatar" alt="Client" class="w-10 h-10 rounded-full object-cover" />
+                  <img :src="ultimaReview.clientAvatar" alt="Client" class="w-11 h-11 rounded-full object-cover ring-2 ring-[var(--border-raised)]" />
                   <div>
-                    <div class="flex items-center gap-2 mb-1"><span class="font-medium text-[var(--text-secondary)] text-sm">{{ ultimaReview.clientName }}</span><div class="flex items-center gap-0.5"><Star v-for="i in 5" :key="i" class="w-3 h-3 text-[var(--accent-amber)] fill-[var(--accent-amber)]" /></div></div>
+                    <div class="flex items-center gap-2 mb-1 flex-wrap"><span class="font-semibold text-[var(--text-secondary)] text-sm">{{ ultimaReview.clientName }}</span><div class="flex items-center gap-0.5"><Star v-for="s in 5" :key="s" class="w-3 h-3 text-[var(--accent-amber)] fill-[var(--accent-amber)]" /></div></div>
                     <p class="text-sm text-[var(--text-muted)]">"{{ ultimaReview.comment }}"</p>
                     <p class="text-xs text-[var(--text-subtle)] mt-1">{{ ultimaReview.serviceType }} • {{ new Date(ultimaReview.date).toLocaleDateString('pt-BR') }}</p>
                   </div>
@@ -790,7 +770,7 @@ onMounted(carregar)
                         <span :class="['px-3 py-1 rounded-full text-xs font-semibold tracking-wide', getStatusBadge(servico.status).style]">{{ getStatusBadge(servico.status).label }}</span>
                       </div>
                       <p class="text-sm text-[var(--text-muted)] leading-relaxed">{{ servico.descricao }}</p>
-                      <div class="flex items-center gap-3 mt-2 text-sm text-white">
+                      <div class="flex items-center gap-3 mt-2 text-sm text-[var(--text-subtle)]">
                         <span class="flex items-center gap-1.5"><MapPin class="w-4 h-4" /> {{ servico.endereco }}</span>
                         <span class="flex items-center gap-1.5"><Calendar class="w-4 h-4" /> {{ new Date(servico.created_at).toLocaleDateString('pt-BR') }}</span>
                       </div>
@@ -863,7 +843,7 @@ onMounted(carregar)
                   <!-- Description -->
                   <p class="text-[var(--text-secondary)] text-sm leading-relaxed mb-4 ml-15">{{ servico.descricao }}</p>
                   <!-- Details -->
-                  <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-white ml-15">
+                  <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-[var(--text-subtle)] ml-15">
                     <span class="flex items-center gap-1.5"><MapPin class="w-4 h-4" /> {{ servico.endereco }}</span>
                     <span class="flex items-center gap-1.5"><Calendar class="w-4 h-4" /> {{ new Date(servico.data_preferida).toLocaleDateString('pt-BR') }}</span>
                     <span class="flex items-center gap-1.5"><Clock class="w-4 h-4" /> {{ diasAtras(servico.created_at) }}</span>
@@ -1367,27 +1347,27 @@ onMounted(carregar)
         <!-- Info Grid -->
         <div class="bg-[var(--bg-raised)] rounded-xl p-4 space-y-3">
           <div class="flex items-center justify-between">
-            <span class="text-sm text-white/60">Categoria</span>
+            <span class="text-sm text-[var(--text-muted)]">Categoria</span>
             <span class="text-sm text-[var(--accent-gold)] font-semibold">{{ servicoDetalhes.categoria }}</span>
           </div>
           <div class="flex items-center justify-between">
-            <span class="text-sm text-white/60">Urgência</span>
+            <span class="text-sm text-[var(--text-muted)]">Urgência</span>
             <span :class="['text-sm font-semibold capitalize', servicoDetalhes.urgencia === 'alta' ? 'text-[var(--accent-red)]' : servicoDetalhes.urgencia === 'media' ? 'text-[var(--accent-amber)]' : 'text-[var(--accent-green)]']">{{ servicoDetalhes.urgencia }}</span>
           </div>
           <div class="flex items-center justify-between">
-            <span class="text-sm text-white/60">Status</span>
-            <span class="text-sm text-white font-medium">{{ servicoDetalhes.status === 'aberto' ? 'Aberto' : servicoDetalhes.status === 'em_andamento' ? 'Em Andamento' : servicoDetalhes.status === 'concluido' ? 'Concluído' : 'Cancelado' }}</span>
+            <span class="text-sm text-[var(--text-muted)]">Status</span>
+            <span class="text-sm text-[var(--text-secondary)] font-medium">{{ servicoDetalhes.status === 'aberto' ? 'Aberto' : servicoDetalhes.status === 'em_andamento' ? 'Em Andamento' : servicoDetalhes.status === 'concluido' ? 'Concluído' : 'Cancelado' }}</span>
           </div>
           <div class="flex items-center justify-between">
-            <span class="text-sm text-white/60">Data Preferida</span>
-            <span class="text-sm text-white font-medium">{{ new Date(servicoDetalhes.data_preferida).toLocaleDateString('pt-BR') }}</span>
+            <span class="text-sm text-[var(--text-muted)]">Data Preferida</span>
+            <span class="text-sm text-[var(--text-secondary)] font-medium">{{ new Date(servicoDetalhes.data_preferida).toLocaleDateString('pt-BR') }}</span>
           </div>
           <div class="flex items-center justify-between">
-            <span class="text-sm text-white/60">Criado em</span>
-            <span class="text-sm text-white font-medium">{{ new Date(servicoDetalhes.created_at).toLocaleDateString('pt-BR') }}</span>
+            <span class="text-sm text-[var(--text-muted)]">Criado em</span>
+            <span class="text-sm text-[var(--text-secondary)] font-medium">{{ new Date(servicoDetalhes.created_at).toLocaleDateString('pt-BR') }}</span>
           </div>
-          <div v-if="servicoDetalhes.orcamento" class="flex items-center justify-between pt-2 border-t border-white/10">
-            <span class="text-sm text-white/60">Orçamento</span>
+          <div v-if="servicoDetalhes.orcamento" class="flex items-center justify-between pt-2 border-t border-[var(--border-default)]">
+            <span class="text-sm text-[var(--text-muted)]">Orçamento</span>
             <span class="text-lg font-bold text-[var(--accent-green)]">R$ {{ servicoDetalhes.orcamento.toLocaleString('pt-BR') }}</span>
           </div>
         </div>
@@ -1397,15 +1377,15 @@ onMounted(carregar)
           <div class="flex items-start gap-3">
             <MapPin class="w-5 h-5 text-[var(--accent-gold)] mt-0.5 shrink-0" />
             <div>
-              <p class="text-sm font-medium text-white">{{ servicoDetalhes.endereco }}</p>
+              <p class="text-sm font-medium text-[var(--text-primary)]">{{ servicoDetalhes.endereco }}</p>
             </div>
           </div>
         </div>
 
         <!-- Descrição -->
         <div class="bg-[var(--bg-raised)] rounded-xl p-4">
-          <p class="text-xs text-white/60 mb-2 font-medium uppercase tracking-wider">Descrição</p>
-          <p class="text-sm text-white leading-relaxed">{{ servicoDetalhes.descricao }}</p>
+          <p class="text-xs text-[var(--text-muted)] mb-2 font-medium uppercase tracking-wider">Descrição</p>
+          <p class="text-sm text-[var(--text-secondary)] leading-relaxed">{{ servicoDetalhes.descricao }}</p>
         </div>
       </div>
       <div class="flex items-center justify-end gap-3 p-6 border-t border-[var(--border-default)]/60">

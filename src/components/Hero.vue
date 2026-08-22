@@ -1,10 +1,23 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
-import logoSrc from '../assets/logo.png'
+import { Search, ArrowRight, CheckCircle } from '@lucide/vue'
 import { getCitiesByUf } from '../data/cities'
+
+const emit = defineEmits<{
+  search: [category: string, location: string]
+  register: []
+}>()
 
 const selectedUf = ref('')
 const selectedCity = ref('')
+
+function emitSearch() {
+  emit('search', '', '')
+}
+
+function emitRegister() {
+  emit('register')
+}
 
 const cidades = ref<string[]>([])
 
@@ -59,17 +72,49 @@ onMounted(() => {
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 relative z-10">
       <div class="text-center max-w-4xl mx-auto">
-        <img :src="logoSrc" alt="Obras & Serviços" class="h-28 md:h-40 lg:h-52 mx-auto mb-6" />
-        <h1 class="text-2xl md:text-3xl lg:text-4xl font-bold text-[var(--text-primary)] mb-6 leading-tight">
-          Encontre os Melhores
-          <span class="text-gradient">Profissionais</span>
-          <br />
-          para sua Obra
+        <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider mb-6 glow-gold"
+          style="background: color-mix(in srgb, var(--accent-gold) 12%, transparent); border: 1px solid color-mix(in srgb, var(--accent-gold) 30%, transparent); color: var(--accent-gold);">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--accent-gold)] opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-[var(--accent-gold)]"></span>
+          </span>
+          Plataforma em lançamento · Cadastro grátis
+        </span>
+
+        <h1 class="text-3xl md:text-4xl lg:text-5xl font-bold text-[var(--text-primary)] mb-5 leading-tight">
+          Construção e reforma <br class="hidden sm:block" />
+          <span class="text-gradient">sem dor de cabeça</span>.
+          <br class="hidden sm:block" />
+          Encontre, contrate e venda — tudo numa plataforma só.
         </h1>
 
-        <p class="text-lg md:text-xl text-[var(--text-muted)] mb-10 max-w-2xl mx-auto">
-          Solicite orçamentos, compare preços e contrate com segurança.
+        <p class="text-lg md:text-xl text-[var(--text-muted)] mb-9 max-w-2xl mx-auto">
+          Conecte-se com <strong class="text-[var(--text-secondary)]">profissionais perto de casa</strong>,
+          lojas de material e orçamentos transparentes. Crie seu perfil gratuito em 2 minutos.
         </p>
+
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-3 mb-6">
+          <button
+            @click="emitSearch()"
+            class="inline-flex items-center gap-2 w-full sm:w-auto justify-center px-8 py-4 bg-gradient-to-r from-[var(--accent-gold)] to-[var(--accent-dark-gold)] hover:from-[var(--accent-dark-gold)] hover:to-[var(--accent-gold)] text-[var(--text-on-accent)] font-bold rounded-xl shadow-lg hover:shadow-[color-mix(in_srgb,var(--accent-gold)_35%,transparent)] transition-all btn-press text-base"
+          >
+            <Search class="w-5 h-5" />
+            Encontrar Profissional
+          </button>
+          <button
+            @click="emitRegister()"
+            class="inline-flex items-center gap-2 w-full sm:w-auto justify-center px-8 py-4 bg-[var(--bg-card)] border border-[var(--border-raised)] hover:border-[var(--accent-gold)] text-[var(--text-primary)] font-semibold rounded-xl transition-all btn-press text-base"
+          >
+            Cadastre-se grátis
+            <ArrowRight class="w-5 h-5" />
+          </button>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-[var(--text-muted)]">
+          <span class="inline-flex items-center gap-1.5"><CheckCircle class="w-4 h-4 text-[var(--accent-green)]" /> Sem cartão de crédito</span>
+          <span class="inline-flex items-center gap-1.5"><CheckCircle class="w-4 h-4 text-[var(--accent-green)]" /> Planos a partir de R$ 9,90</span>
+          <span class="inline-flex items-center gap-1.5"><CheckCircle class="w-4 h-4 text-[var(--accent-green)]" /> Em todo o Brasil</span>
+        </div>
 
         <!-- TODO: Barra de busca - desabilitada temporariamente
         <div class="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-2xl p-3 md:p-4 shadow-2xl max-w-5xl mx-auto">
