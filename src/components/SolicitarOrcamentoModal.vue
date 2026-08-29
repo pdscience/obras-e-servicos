@@ -47,11 +47,11 @@ async function carregarProfissoes() {
 onMounted(carregarProfissoes)
 
 function canProceedStep1() {
-  return form.value.cliente_nome && form.value.cliente_contato && form.value.categoria
+  return form.value.cliente_nome && form.value.categoria
 }
 
 function canProceedStep2() {
-  return form.value.descricao && form.value.endereco
+  return form.value.descricao
 }
 
 async function submit() {
@@ -61,10 +61,10 @@ async function submit() {
       cliente_id: auth.user?.id ?? 'usr-exemplo',
       profissional_id: props.profissionalId || undefined,
       cliente_nome: form.value.cliente_nome,
-      cliente_contato: form.value.cliente_contato,
+      cliente_contato: form.value.cliente_contato || 'Não informado',
       categoria: form.value.categoria,
       descricao: form.value.descricao,
-      endereco: form.value.endereco,
+      endereco: form.value.endereco || 'Não informado',
       data_preferida: form.value.data_preferida,
       orcamento: form.value.orcamento,
       urgencia: form.value.urgencia,
@@ -147,7 +147,7 @@ function handleCreated() {
             />
           </div>
           <div>
-            <label class="block text-sm font-medium text-[var(--text-secondary)] mb-1.5">Telefone para contato *</label>
+            <label class="block text-sm font-medium text-[var(--text-secondary)] mb-1.5">Telefone para contato <span class="text-[var(--text-subtle)] font-normal">(opcional)</span></label>
             <input
               v-model="form.cliente_contato"
               type="text"
@@ -195,7 +195,7 @@ function handleCreated() {
             ></textarea>
           </div>
           <div>
-            <label class="block text-sm font-medium text-[var(--text-secondary)] mb-1.5">Endereço *</label>
+            <label class="block text-sm font-medium text-[var(--text-secondary)] mb-1.5">Endereço <span class="text-[var(--text-subtle)] font-normal">(opcional)</span></label>
             <div class="relative">
               <MapPin class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]" />
               <input

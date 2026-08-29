@@ -28,11 +28,11 @@ export const PLANOS: Record<PlanoProfissional, PlanoConfig> = {
     foco: 'Autônomos em crescimento',
     publico: 'profissional',
     limiteFotos: 6,
-    limiteCategorias: 2,
+    limiteCategorias: 1,
     destaque: 'prioritario',
     cor: 'prata',
     beneficios: [
-      'Cadastro de até 2 tipos de serviços',
+      'Cadastro de até 1 tipo de serviço',
       'Destaque prioritário no Painel de Buscas',
       'Portfólio com até 6 fotos',
       'Link de redes Sociais (Instagram, Facebook)',

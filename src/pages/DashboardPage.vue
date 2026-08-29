@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import {
   Briefcase, MessageCircle, Star,
   Calendar, DollarSign, Clock,
@@ -17,6 +18,7 @@ import { usePeriodoGratis } from '../composables/usePeriodoGratis'
 defineEmits<{ back: [] }>()
 
 const auth = useAuthStore()
+const route = useRoute()
 const activeTab = ref('overview')
 const meusServicos = ref<ServiceRequest[]>([])
 const servicosAbertos = ref<ServiceRequest[]>([])
@@ -248,6 +250,14 @@ const monthlyStats = computed(() => {
   ]
 })
 
+const monthlyStatsOrdenado = computed(() => {
+  const itens = monthlyStats.value.map(s => ({ ...s, num: Number(s.value) || 0 }))
+  const max = Math.max(1, ...itens.map(s => s.num))
+  return itens
+    .sort((a, b) => b.num - a.num)
+    .map(s => ({ ...s, pct: Math.round((s.num / max) * 100) }))
+})
+
 const ultimaReview = computed(() => {
   const r = pro.value.reviews[0]
   if (!r) return null
@@ -296,7 +306,7 @@ async function carregar() {
       editNome.value = auth.user.nome
       const perfil = await obterPerfilProfissional(auth.user.id)
       if (perfil) {
-        proNome.value = auth.user.nome
+        proNome.value = auth.user.nome ?? 'Profissional'
         proAvatar.value = auth.user.avatar_url ?? ''
         proCategoria.value = perfil.categoria
         proPremium.value = perfil.premium
@@ -553,7 +563,27 @@ async function handleAvatarUpload() {
   input.click()
 }
 
-onMounted(carregar)
+watch(
+  () => auth.user?.id,
+  (id) => {
+    if (id) carregar()
+  },
+  { immediate: true }
+)
+
+function applyTabFromRoute() {
+  const tab = route.query.tab as string | undefined
+  if (tab && ['overview', 'requests', 'job-board', 'reviews', 'settings'].includes(tab)) {
+    activeTab.value = tab
+  }
+}
+
+watch(() => route.query.tab, applyTabFromRoute)
+
+onMounted(() => {
+  auth.ensureInitialized()
+  applyTabFromRoute()
+})
 </script>
 
 <template>
@@ -708,18 +738,23 @@ onMounted(carregar)
               </div>
             </div>
 
-            <div class="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-2xl shadow-sm p-5">
-              <h2 class="font-semibold text-[var(--text-secondary)] mb-4">Resumo</h2>
-              <div class="space-y-4">
-                <div v-for="(item, i) in monthlyStats" :key="i" class="flex items-center justify-between">
-                  <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-lg flex items-center justify-center" :style="{ background: item.color + '18' }"><component :is="item.icon" class="w-4 h-4" :style="{ color: item.color }" /></div>
-                    <span class="text-sm text-[var(--text-muted)]">{{ item.label }}</span>
+              <div class="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-2xl shadow-sm p-5">
+                <h2 class="font-semibold text-[var(--text-secondary)] mb-4">Resumo</h2>
+                <div class="space-y-4">
+                  <div v-for="item in monthlyStatsOrdenado" :key="item.label" class="space-y-1.5">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center" :style="{ background: item.color + '18' }"><component :is="item.icon" class="w-4 h-4" :style="{ color: item.color }" /></div>
+                        <span class="text-sm text-[var(--text-muted)]">{{ item.label }}</span>
+                      </div>
+                      <span class="font-semibold text-[var(--text-primary)] font-mono">{{ item.value }}</span>
+                    </div>
+                    <div class="w-full bg-[var(--bg-raised)] rounded-full h-2 overflow-hidden">
+                      <div class="h-2 rounded-full transition-all duration-500" :style="{ width: item.pct + '%', background: item.color }"></div>
+                    </div>
                   </div>
-                  <span class="font-semibold text-[var(--text-primary)] font-mono">{{ item.value }}</span>
                 </div>
               </div>
-            </div>
 
             <div v-if="ultimaReview" class="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-2xl shadow-sm overflow-hidden">
               <div class="p-5 border-b border-[var(--border-default)] flex items-center justify-between">

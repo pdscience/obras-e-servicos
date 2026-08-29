@@ -267,6 +267,28 @@ export async function criarReview(review: Omit<ReviewDB, 'id' | 'created_at'>) {
     .select()
     .single()
   if (error) throw error
+
+  if (review.profissional_id) {
+    try {
+      const { data: avaliacoes, error: errAval } = await insforge.database
+        .from('reviews')
+        .select('rating')
+        .eq('profissional_id', review.profissional_id)
+      if (!errAval && avaliacoes) {
+        const notas = avaliacoes as Array<{ rating: number | string }>
+        const total = notas.length
+        const soma = notas.reduce((acc, r) => acc + (Number(r.rating) || 0), 0)
+        const media = total > 0 ? Math.round((soma / total) * 100) / 100 : 0
+        await insforge.database
+          .from('perfis_profissional')
+          .update({ avaliacao_media: media, total_avaliacoes: total })
+          .eq('id', review.profissional_id)
+      }
+    } catch {
+      // Falha ao atualizar o agregado não deve impedir que a avaliação seja salva
+    }
+  }
+
   return mapReview(data)
 }
 
@@ -384,6 +406,16 @@ export async function criarUsuario(usuario: {
     const tiposArray = usuario.tipos ?? (usuario.tipo ? [usuario.tipo] : ['cliente'])
     // Formato PostgreSQL array literal: {item1,item2}
     const tiposPg = `{${tiposArray.join(',')}}`
+
+    let tipoFinal = usuario.tipo
+    if (!tipoFinal) {
+      const existente = await obterUsuario(usuario.id).catch(() => null)
+      tipoFinal = existente?.tipo
+        ?? (tiposArray.includes('lojista') ? 'lojista'
+           : tiposArray.includes('profissional') ? 'profissional'
+           : tiposArray.includes('cliente') ? 'cliente' : 'usuario')
+    }
+
     const { error } = await insforge.database
       .from('usuarios')
       .upsert({
@@ -391,7 +423,7 @@ export async function criarUsuario(usuario: {
         email: usuario.email,
         nome: usuario.nome,
         telefone: usuario.telefone ?? null,
-        tipo: usuario.tipo ?? 'usuario',
+        tipo: tipoFinal,
         tipos: tiposPg,
         status: 'ativo',
       }, { onConflict: 'id' })

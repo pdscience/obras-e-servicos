@@ -267,7 +267,7 @@ function fecharMensagem() {
           </div>
           <div class="flex flex-row md:flex-col gap-2">
             <button class="p-2 bg-[var(--bg-raised)] hover:bg-[var(--border-default)] rounded-lg transition-colors"><Heart class="w-5 h-5 text-[var(--text-muted)]" /></button>
-            <button class="p-2 bg-[var(--bg-raised)] hover:bg-[var(--border-default)] rounded-lg transition-colors"><Share2 class="w-5 h-5 text-[var(--text-muted)]" /></button>
+            <button class="inline-flex items-center gap-2 px-3 py-2 bg-[var(--bg-raised)] hover:bg-[var(--border-default)] rounded-lg transition-colors text-sm text-[var(--text-muted)]"><Share2 class="w-5 h-5" /> Compartilhar</button>
           </div>
         </div>
       </div>

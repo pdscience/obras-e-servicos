@@ -17,7 +17,7 @@ const showHeaderFooter = computed(() => {
 })
 
 onMounted(() => {
-  auth.init()
+  auth.ensureInitialized()
   seedCategoriasProfissoes().catch(() => {})
   migrarPlanos().catch(() => {})
 })

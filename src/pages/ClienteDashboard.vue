@@ -4,12 +4,12 @@ import {
   ClipboardList, Clock, CheckCircle2,
   User,
   Briefcase, DollarSign, Search, ArrowRight,
-  MapPin, Calendar, MessageCircle, Star, X, Crown
+  MapPin, Calendar, MessageCircle, Star, X, Crown, AlertTriangle
 } from '@lucide/vue'
-import { listarServicosDoCliente, obterPerfilProfissionalPorId, atualizarPerfilUsuario, atualizarStatusServico, criarReview, listarProfissionais, mapPerfilToProfessional, criarPerfilUsuario } from '../services/api'
+import { listarServicosDoCliente, obterPerfilProfissionalPorId, obterPerfilUsuario, atualizarPerfilUsuario, atualizarStatusServico, criarReview, listarProfissionais, mapPerfilToProfessional, criarPerfilUsuario } from '../services/api'
 import { getCitiesByUf } from '../data/cities'
 import { useAuthStore } from '../stores/auth'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import SolicitarOrcamentoModal from '@/components/SolicitarOrcamentoModal.vue'
 import type { ServiceRequest, Professional } from '../types'
 
@@ -17,6 +17,7 @@ defineEmits<{ back: [] }>()
 
 const auth = useAuthStore()
 const router = useRouter()
+const route = useRoute()
 const servicos = ref<ServiceRequest[]>([])
 const loading = ref(true)
 const activeTab = ref('todos')
@@ -54,8 +55,22 @@ function verPerfil(pro: Professional) {
   router.push({ name: 'profile', params: { id: pro.id } })
 }
 
+function whatsappUrl(num?: string) {
+  if (!num) return '#'
+  const digits = num.replace(/\D/g, '')
+  const withCode = digits.startsWith('55') ? digits : `55${digits}`
+  return `https://wa.me/${withCode}`
+}
+
+function planoElegivelWhatsapp(pro: Professional) {
+  const plano = (pro.premium_plano ?? '').toLowerCase()
+  return ['bronze', 'prata', 'ouro'].includes(plano) || pro.premium === true
+}
+
 const showEditModal = ref(false)
 const showOrcamentoModal = ref(false)
+const showCancelConfirm = ref(false)
+const cancelarServicoId = ref<string | null>(null)
 const editNome = ref('')
 const editTelefone = ref('')
 const editCpf = ref('')
@@ -171,7 +186,30 @@ watch(() => auth.user, (newUser) => {
 onMounted(() => {
   carregar()
   carregarProfissionais()
+  if (route.query.configurar) abrirEdicao()
 })
+
+watch(() => route.query.configurar, (v) => {
+  if (v) abrirEdicao()
+})
+
+async function abrirEdicao() {
+  if (!auth.user) return
+  editNome.value = auth.user.nome
+  try {
+    const perfil = await obterPerfilUsuario(auth.user.id)
+    if (perfil) {
+      editTelefone.value = perfil.telefone ?? ''
+      editCpf.value = perfil.cpf ?? ''
+      editDataNascimento.value = perfil.data_nascimento ?? ''
+      editUf.value = perfil.uf ?? ''
+      editCidade.value = perfil.cidade ?? ''
+      editEndereco.value = perfil.endereco ?? ''
+      if (editUf.value) editCidades.value = await getCitiesByUf(editUf.value)
+    }
+  } catch { /* sem perfil ainda */ }
+  showEditModal.value = true
+}
 
 const filteredServicos = computed(() => {
   if (activeTab.value === 'todos') return servicos.value
@@ -227,6 +265,7 @@ function getUrgenciaBadge(urgencia: string) {
 async function handleConcluir(servicoId: string) {
   try {
     await atualizarStatusServico(servicoId, 'concluido')
+    await carregar()
   } catch (e: unknown) {
     alert((e as Error).message)
   }
@@ -235,9 +274,22 @@ async function handleConcluir(servicoId: string) {
 async function handleCancelarServico(servicoId: string) {
   try {
     await atualizarStatusServico(servicoId, 'cancelado')
+    await carregar()
   } catch (e: unknown) {
     alert((e as Error).message)
   }
+}
+
+function pedirConfirmacaoCancelar(servicoId: string) {
+  cancelarServicoId.value = servicoId
+  showCancelConfirm.value = true
+}
+
+async function confirmarCancelar() {
+  if (!cancelarServicoId.value) return
+  await handleCancelarServico(cancelarServicoId.value)
+  showCancelConfirm.value = false
+  cancelarServicoId.value = null
 }
 
 function abrirAvaliacao(servicoId: string) {
@@ -377,6 +429,16 @@ function fecharReview() {
 
               <div class="mt-auto flex items-center justify-between pt-3 border-t border-[var(--border-default)]">
                 <div v-if="pro.pricePerHour > 0" class="text-xs text-[var(--text-subtle)]">R$ <span class="font-bold text-[var(--text-primary)] text-sm">{{ pro.pricePerHour }}</span>/h</div>
+                <a
+                  v-else-if="pro.whatsapp && planoElegivelWhatsapp(pro)"
+                  :href="whatsappUrl(pro.whatsapp)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[color-mix(in_srgb,var(--accent-green)_10%,transparent)] text-[var(--accent-green)] hover:bg-[color-mix(in_srgb,var(--accent-green)_20%,transparent)] transition-colors text-sm font-medium"
+                  title="Falar via WhatsApp"
+                >
+                  <MessageCircle class="w-4 h-4" /> WhatsApp
+                </a>
                 <div v-else class="text-xs text-[var(--text-subtle)]">Sob consulta</div>
                 <button @click="verPerfil(pro)" class="px-4 py-2 bg-[var(--accent-gold)] text-[var(--text-on-accent)] rounded-lg text-sm font-semibold hover:shadow-lg transition-all">
                   Ver Perfil
@@ -522,11 +584,22 @@ function fecharReview() {
                   Marcar como Concluído
                 </button>
                 <button
-                  @click="handleCancelarServico(servico.id)"
+                  @click="pedirConfirmacaoCancelar(servico.id)"
                   class="inline-flex items-center gap-2 px-4 py-2 bg-[var(--accent-red)]/10 text-[var(--accent-red)] text-sm rounded-xl font-semibold hover:bg-[var(--accent-red)]/20 active:scale-[0.98] transition-all duration-200"
                 >
                   <X class="w-4 h-4" />
                   Cancelar
+                </button>
+              </div>
+
+              <!-- Cancelar (solicitação ainda aberta) -->
+              <div v-else-if="servico.status === 'aberto'" class="mt-4 ml-12 flex items-center gap-3">
+                <button
+                  @click="pedirConfirmacaoCancelar(servico.id)"
+                  class="inline-flex items-center gap-2 px-4 py-2 bg-[var(--accent-red)]/10 text-[var(--accent-red)] text-sm rounded-xl font-semibold hover:bg-[var(--accent-red)]/20 active:scale-[0.98] transition-all duration-200"
+                >
+                  <X class="w-4 h-4" />
+                  Cancelar solicitação
                 </button>
               </div>
 
@@ -606,7 +679,7 @@ function fecharReview() {
   <SolicitarOrcamentoModal
     v-if="showOrcamentoModal"
     @close="showOrcamentoModal = false"
-    @created="showOrcamentoModal = false"
+    @created="showOrcamentoModal = false; carregar()"
     @requestLogin="showOrcamentoModal = false"
   />
 
@@ -652,4 +725,36 @@ function fecharReview() {
       </div>
     </div>
   </div>
+
+  <!-- Confirmar Cancelamento -->
+  <Teleport to="body">
+    <div v-if="showCancelConfirm" class="fixed inset-0 z-[60] flex items-center justify-center p-4" style="background: rgba(0,0,0,0.7)" @click.self="showCancelConfirm = false">
+      <div class="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-2xl w-full max-w-sm shadow-2xl">
+        <div class="p-6 text-center">
+          <div class="w-14 h-14 bg-[color-mix(in_srgb,var(--accent-red)_12%,transparent)] rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle class="w-7 h-7 text-[var(--accent-red)]" />
+          </div>
+          <h3 class="text-lg font-bold text-[var(--text-primary)] mb-2">Cancelar solicitação?</h3>
+          <p class="text-sm text-[var(--text-muted)] mb-6">
+            Tem certeza que deseja cancelar este pedido de orçamento? Esta ação não pode ser desfeita.
+          </p>
+          <div class="flex gap-3">
+            <button
+              @click="showCancelConfirm = false"
+              class="flex-1 py-2.5 bg-[var(--bg-raised)] border border-[var(--border-raised)] text-[var(--text-secondary)] rounded-xl text-sm font-semibold hover:bg-[var(--border-default)] transition-colors"
+            >
+              Voltar
+            </button>
+            <button
+              @click="confirmarCancelar"
+              class="flex-1 py-2.5 bg-[var(--accent-red)] text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-all flex items-center justify-center gap-2"
+            >
+              <X class="w-4 h-4" />
+              Sim, cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>

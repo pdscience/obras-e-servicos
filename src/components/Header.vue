@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Menu, X, LogIn, Sun, Moon, LogOut, LayoutDashboard } from '@lucide/vue'
+import { Menu, X, LogIn, Sun, Moon, LogOut, LayoutDashboard, Settings } from '@lucide/vue'
 import { useAuthStore } from '../stores/auth'
 import { useTheme } from '../composables/useTheme'
 import EditarPerfilModal from './EditarPerfilModal.vue'
@@ -19,10 +19,20 @@ function handleLogout() {
   router.push({ name: 'home' })
 }
 
-function navigate(routeName: string) {
-  router.push({ name: routeName })
-  mobileMenuOpen.value = false
-}
+  function navigate(routeName: string) {
+    router.push({ name: routeName })
+    mobileMenuOpen.value = false
+  }
+
+  function navigateSettings() {
+    router.push({ name: 'dashboard', query: { tab: 'settings' } })
+    mobileMenuOpen.value = false
+  }
+
+  function navigateConfigurar() {
+    router.push({ name: 'cliente-dashboard', query: { configurar: '1' } })
+    mobileMenuOpen.value = false
+  }
 
 function abrirEditarPerfil() {
   mobileMenuOpen.value = false
@@ -30,6 +40,7 @@ function abrirEditarPerfil() {
 }
 
 const navItems = computed(() => {
+  if (auth.isLoggedIn) return []
   const items = [
     { id: 'home', label: 'Início' },
     { id: 'categories', label: 'Categorias' },
@@ -136,10 +147,25 @@ const navItems = computed(() => {
             <LayoutDashboard class="w-4 h-4 mr-2 inline-block" />
             Meu Painel
           </button>
+          <button
+            v-if="auth.currentMode === 'profissional'"
+            @click="navigateSettings"
+            class="block w-full text-left px-4 py-2.5 rounded-lg text-[var(--text-muted)] font-medium"
+          >
+            <Settings class="w-4 h-4 mr-2 inline-block" />
+            Perfil Profissional
+          </button>
+          <button
+            @click="navigateConfigurar"
+            class="block w-full text-left px-4 py-2.5 rounded-lg text-[var(--text-muted)] font-medium"
+          >
+            <Settings class="w-4 h-4 mr-2 inline-block" />
+            Perfil Cliente
+          </button>
         </template>
 
         <!-- Navegación principal -->
-        <template v-if="auth.currentMode !== 'profissional'">
+        <template v-if="!auth.isLoggedIn">
           <button
             v-for="item in navItems"
             :key="item.id"
@@ -149,14 +175,6 @@ const navItems = computed(() => {
               route.name === item.id ? 'bg-[color-mix(in_srgb,var(--accent-gold)_10%,transparent)] text-[var(--accent-gold)]' : 'text-[var(--text-muted)] hover:bg-[var(--bg-raised)]'
             ]"
           >{{ item.label }}</button>
-        </template>
-        <template v-else-if="auth.isLoggedIn">
-          <button
-            @click="navigate('quadro-servicos')"
-            class="block w-full text-left px-4 py-2 rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-raised)]"
-          >
-            Quadro de Serviços
-          </button>
         </template>
 
         <hr class="my-3 border-[var(--border-default)]" />

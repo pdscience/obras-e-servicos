@@ -80,7 +80,7 @@ async function verificar(usuarioId, tipo, planoEsperado) {
   return ok
 }
 
-const LIMITE_CATS = { bronze: 1, prata: 2, ouro: 3, platina: 3, diamante: 3 }
+const LIMITE_CATS = { bronze: 1, prata: 1, ouro: 3, platina: 3, diamante: 3 }
 
 async function testarLimiteCategorias(usuarioId, plano) {
   const max = LIMITE_CATS[plano] ?? 1

@@ -116,30 +116,31 @@ async function handleLogin(e: Event) {
   submitting.value = false
   if (!ok) {
     loginError.value = auth.error
+    return
   }
-  if (ok) {
-    if (auth.requireEmailVerification) {
-      verificationSent.value = true
-    } else {
-      const mapeamento: Record<string, string> = {
-        'cliente': 'cliente',
-        'profissional': 'profissional',
-        'lojista': 'lojista'
-      }
-      if (!auth.user?.tipos.includes(mapeamento[loginMode.value])) {
-        loginError.value = `Sua conta não tem acesso como ${loginMode.value === 'profissional' ? 'Profissional' : loginMode.value === 'lojista' ? 'Lojista' : 'Cliente'}.`
-        await auth.logout()
-        return
-      }
-      auth.setMode(loginMode.value)
-      const destino: Record<string, string> = {
-        cliente: 'cliente-dashboard',
-        profissional: 'dashboard',
-        lojista: 'loja-dashboard',
-      }
-      router.push({ name: destino[loginMode.value] })
+  if (auth.requireEmailVerification) {
+    verificationSent.value = true
+    return
+  }
+  const modo = loginMode.value
+  const papel = modo === 'profissional' ? 'profissional' : modo === 'lojista' ? 'lojista' : null
+  if (papel && !auth.user?.tipos.includes(papel)) {
+    // Conta multi-perfil: mesmo e-mail pode ser cliente, profissional e lojista.
+    // Se o perfil selecionado ainda não existe, ele é criado automaticamente.
+    const adicionado = await auth.adicionarRole(papel)
+    if (!adicionado) {
+      loginError.value = `Não foi possível ativar o acesso como ${modo === 'profissional' ? 'Profissional' : 'Lojista'}. Tente novamente.`
+      await auth.logout()
+      return
     }
   }
+  auth.setMode(modo)
+  const destino: Record<string, string> = {
+    cliente: 'cliente-dashboard',
+    profissional: 'dashboard',
+    lojista: 'loja-dashboard',
+  }
+  router.push({ name: destino[modo] })
 }
 
 async function handleRegister() {

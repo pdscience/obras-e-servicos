@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { LogOut, LayoutDashboard } from '@lucide/vue'
+import { LogOut, LayoutDashboard, Settings } from '@lucide/vue'
 import { useAuthStore } from '../stores/auth'
 import logoSrc from '../assets/logo.png'
 
@@ -11,6 +11,14 @@ const auth = useAuthStore()
 
 function navigate(routeName: string) {
   router.push({ name: routeName })
+}
+
+function navigateSettings() {
+  router.push({ name: 'dashboard', query: { tab: 'settings' } })
+}
+
+function navigateConfigurar() {
+  router.push({ name: 'cliente-dashboard', query: { configurar: '1' } })
 }
 
 function handleLogout() {
@@ -23,6 +31,7 @@ const dashboardRoute = computed(() =>
 )
 
 const navItems = computed(() => {
+  if (auth.isLoggedIn) return []
   const items = [
     { id: 'home', label: 'Início' },
     { id: 'categories', label: 'Categorias' },
@@ -49,23 +58,25 @@ const navItems = computed(() => {
 
     <!-- Navegação -->
     <nav class="flex-1 space-y-1 overflow-y-auto">
-      <p class="px-3 mb-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-subtle)]">Menu de funções</p>
-      <button
-        v-for="item in navItems"
-        :key="item.id"
-        @click="navigate(item.id)"
-        :class="[
-          'w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-xl transition-colors text-left',
-          route.name === item.id
-            ? 'bg-[color-mix(in_srgb,var(--accent-gold)_12%,transparent)] text-[var(--accent-gold)] font-semibold'
-            : 'text-[var(--text-muted)] hover:bg-[var(--bg-raised)] hover:text-[var(--text-secondary)]'
-        ]"
-      >
-        <span class="w-5 h-5 shrink-0 flex items-center justify-center text-[var(--accent-gold)]">
-          <span class="w-1.5 h-1.5 rounded-full" :class="route.name === item.id ? 'bg-[var(--accent-gold)]' : 'bg-[var(--text-subtle)]'"></span>
-        </span>
-        {{ item.label }}
-      </button>
+      <template v-if="navItems.length">
+        <p class="px-3 mb-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-subtle)]">Menu de funções</p>
+        <button
+          v-for="item in navItems"
+          :key="item.id"
+          @click="navigate(item.id)"
+          :class="[
+            'w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-xl transition-colors text-left',
+            route.name === item.id
+              ? 'bg-[color-mix(in_srgb,var(--accent-gold)_12%,transparent)] text-[var(--accent-gold)] font-semibold'
+              : 'text-[var(--text-muted)] hover:bg-[var(--bg-raised)] hover:text-[var(--text-secondary)]'
+          ]"
+        >
+          <span class="w-5 h-5 shrink-0 flex items-center justify-center text-[var(--accent-gold)]">
+            <span class="w-1.5 h-1.5 rounded-full" :class="route.name === item.id ? 'bg-[var(--accent-gold)]' : 'bg-[var(--text-subtle)]'"></span>
+          </span>
+          {{ item.label }}
+        </button>
+      </template>
 
       <template v-if="auth.isLoggedIn">
         <div class="border-t border-[var(--border-default)] my-3"></div>
@@ -73,11 +84,38 @@ const navItems = computed(() => {
           @click="navigate(dashboardRoute)"
           :class="[
             'w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-xl transition-colors text-left',
-            route.name === dashboardRoute ? 'bg-[color-mix(in_srgb,var(--accent-gold)_12%,transparent)] text-[var(--accent-gold)] font-semibold' : 'text-[var(--text-muted)] hover:bg-[var(--bg-raised)]'
+            route.name === dashboardRoute && !route.query.tab
+              ? 'bg-[color-mix(in_srgb,var(--accent-gold)_12%,transparent)] text-[var(--accent-gold)] font-semibold'
+              : 'text-[var(--text-muted)] hover:bg-[var(--bg-raised)]'
           ]"
         >
           <LayoutDashboard class="w-5 h-5 shrink-0 text-[var(--accent-gold)]" />
           Meu Painel
+        </button>
+        <button
+          v-if="auth.currentMode === 'profissional'"
+          @click="navigateSettings"
+          :class="[
+            'w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-xl transition-colors text-left',
+            route.query.tab === 'settings'
+              ? 'bg-[color-mix(in_srgb,var(--accent-gold)_12%,transparent)] text-[var(--accent-gold)] font-semibold'
+              : 'text-[var(--text-muted)] hover:bg-[var(--bg-raised)]'
+          ]"
+        >
+          <Settings class="w-5 h-5 shrink-0 text-[var(--accent-gold)]" />
+          Perfil Profissional
+        </button>
+        <button
+          @click="navigateConfigurar"
+          :class="[
+            'w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-xl transition-colors text-left',
+            route.query.configurar
+              ? 'bg-[color-mix(in_srgb,var(--accent-gold)_12%,transparent)] text-[var(--accent-gold)] font-semibold'
+              : 'text-[var(--text-muted)] hover:bg-[var(--bg-raised)]'
+          ]"
+        >
+          <Settings class="w-5 h-5 shrink-0 text-[var(--accent-gold)]" />
+          Perfil Cliente
         </button>
       </template>
     </nav>

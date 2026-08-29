@@ -19,6 +19,8 @@ export interface AuthUser {
   avatar_url: string | null
 }
 
+const SESSION_FLAG = 'os_sessao'
+
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<AuthUser | null>(null)
   const loading = ref(true)
@@ -66,11 +68,31 @@ export const useAuthStore = defineStore('auth', () => {
     return Array.from(tiposSet)
   }
 
+  let initPromise: Promise<void> | null = null
+
+  async function ensureInitialized() {
+    if (!initPromise) {
+      initPromise = init()
+    }
+    return initPromise
+  }
+
   async function init() {
     loading.value = true
     error.value = null
+    const temSessao = !!localStorage.getItem(SESSION_FLAG)
+      || /[?&](code|state)=/.test(window.location.search)
+    if (!temSessao) {
+      loading.value = false
+      return
+    }
     const { data, error: err } = await insforge.auth.getCurrentUser()
-    if (!err && data?.user) {
+    if (err) {
+      localStorage.removeItem(SESSION_FLAG)
+      loading.value = false
+      return
+    }
+    if (data?.user) {
       const u = data.user as { id: string; email: string; profile?: { name?: string; avatar_url?: string } }
       const tipos = await detectTipos(u.id)
       if (u.id) {
@@ -86,6 +108,7 @@ export const useAuthStore = defineStore('auth', () => {
         }
       }
       user.value = mergeUser(u, tipos)
+      localStorage.setItem(SESSION_FLAG, '1')
       if (tipos.includes('profissional')) {
         currentMode.value = 'profissional'
       } else if (tipos.includes('lojista')) {
@@ -128,6 +151,7 @@ export const useAuthStore = defineStore('auth', () => {
         })
       }
       user.value = mergeUser(u, tipos)
+      localStorage.setItem(SESSION_FLAG, '1')
       if (tipos.includes('profissional')) {
         currentMode.value = 'profissional'
       } else if (tipos.includes('lojista')) {
@@ -167,6 +191,7 @@ export const useAuthStore = defineStore('auth', () => {
         if (u && u.id) {
           const tipos = await detectTipos(u.id)
           user.value = mergeUser(u, tipos)
+          localStorage.setItem(SESSION_FLAG, '1')
           // Set mode based on existing roles
           if (tipos.includes('profissional')) {
             currentMode.value = 'profissional'
@@ -241,6 +266,9 @@ export const useAuthStore = defineStore('auth', () => {
     if (data?.requireEmailVerification) {
       requireEmailVerification.value = true
     }
+    if (user.value) {
+      localStorage.setItem(SESSION_FLAG, '1')
+    }
     return !data?.requireEmailVerification
   }
 
@@ -254,6 +282,7 @@ export const useAuthStore = defineStore('auth', () => {
     const u = data?.user as { id: string; email: string; profile?: { name?: string; avatar_url?: string } } | undefined
     if (u && user.value) {
       user.value = mergeUser(u, user.value.tipos)
+      localStorage.setItem(SESSION_FLAG, '1')
     }
     requireEmailVerification.value = false
     return true
@@ -335,6 +364,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function logout() {
     const { error: err } = await insforge.auth.signOut()
     if (!err) {
+      localStorage.removeItem(SESSION_FLAG)
       user.value = null
       currentMode.value = 'cliente'
     }
@@ -349,6 +379,7 @@ export const useAuthStore = defineStore('auth', () => {
     isLoggedIn,
     temPerfilProfissional,
     temPerfilLojista,
+    ensureInitialized,
     init,
     login,
     register,
