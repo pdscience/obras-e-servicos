@@ -17,10 +17,6 @@ function navigateSettings() {
   router.push({ name: 'dashboard', query: { tab: 'settings' } })
 }
 
-function navigateConfigurar() {
-  router.push({ name: 'cliente-dashboard', query: { configurar: '1' } })
-}
-
 function handleLogout() {
   auth.logout()
   router.push({ name: 'home' })
@@ -92,7 +88,7 @@ const navItems = computed(() => {
           <LayoutDashboard class="w-5 h-5 shrink-0 text-[var(--accent-gold)]" />
           Meu Painel
         </button>
-        <button
+                <button
           v-if="auth.currentMode === 'profissional'"
           @click="navigateSettings"
           :class="[
@@ -104,18 +100,6 @@ const navItems = computed(() => {
         >
           <Settings class="w-5 h-5 shrink-0 text-[var(--accent-gold)]" />
           Perfil Profissional
-        </button>
-        <button
-          @click="navigateConfigurar"
-          :class="[
-            'w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-xl transition-colors text-left',
-            route.query.configurar
-              ? 'bg-[color-mix(in_srgb,var(--accent-gold)_12%,transparent)] text-[var(--accent-gold)] font-semibold'
-              : 'text-[var(--text-muted)] hover:bg-[var(--bg-raised)]'
-          ]"
-        >
-          <Settings class="w-5 h-5 shrink-0 text-[var(--accent-gold)]" />
-          Perfil Cliente
         </button>
       </template>
     </nav>

@@ -8,7 +8,7 @@ import {
   Eye, Crown, Camera,
   Search, MapPin, User, X, Shield
 } from '@lucide/vue'
-import insforge, { listarServicosDoProfissional, listarServicosAbertos, concluirServico, cancelarServico, negociarServico, obterPerfilProfissional, criarPerfilProfissional, atualizarPerfilProfissional, obterPerfilUsuario, atualizarPerfilUsuario, listarReviews, ativarPremium, listarCategorias, listarTodasProfissoes, listarCategoriasProfissional, salvarCategoriasProfissional, uploadPortfolioImage } from '../services/api'
+import insforge, { listarServicosDoProfissional, listarServicosAbertos, concluirServico, cancelarServico, negociarServico, obterPerfilProfissional, criarPerfilProfissional, atualizarPerfilProfissional, obterPerfilUsuario, atualizarPerfilUsuario, listarReviews, listarCategorias, listarTodasProfissoes, listarCategoriasProfissional, salvarCategoriasProfissional, uploadPortfolioImage } from '../services/api'
 import { getCitiesByUf } from '../data/cities'
 import type { ServiceRequest, CategoriaDB, ProfissaoDB, ProfissionalCategoriaView, PlanoProfissional, PortfolioItem } from '../types'
 import { PLANOS_PROFISSIONAIS, limiteCategoriasPlano, limiteFotosPlano, PLANOS, obterPlanoEficaz } from '../config/planos'
@@ -516,18 +516,14 @@ async function handleUpgrade(plano: PlanoProfissional) {
     const url = (data as { checkout_url?: string })?.checkout_url
     if (url) {
       window.open(url, '_blank')
+      notificarSucesso('Redirecionando para a página segura de pagamento...')
+      showPlansModal.value = false
     } else {
-      const dias = 30
-      await ativarPremium(proId.value, plano, dias)
-      proPremium.value = true
-      proPremiumPlano.value = plano
-      const exp = new Date()
-      exp.setDate(exp.getDate() + dias)
-      proPremiumExpiracao.value = exp.toISOString()
+      notificarErro('O checkout para este plano está em integração. Por favor, contate o suporte.')
     }
-    showPlansModal.value = false
   } catch (err: any) {
-    console.error('Erro ao ativar plano:', err)
+    console.error('Erro ao gerar pagamento:', err)
+    notificarErro('Não foi possível iniciar o pagamento: ' + (err?.message || 'Tente novamente.'))
   } finally {
     loading.value = false
   }

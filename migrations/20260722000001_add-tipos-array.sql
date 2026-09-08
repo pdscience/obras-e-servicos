@@ -7,7 +7,7 @@ ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS tipos TEXT[] DEFAULT ARRAY['client
 UPDATE usuarios SET tipos = ARRAY[tipo] WHERE tipos IS NULL OR array_length(tipos, 1) IS NULL;
 
 -- Garantir que todo usuário tenha pelo menos 'cliente' no array
-UPDATE usuarios SET tipos = array_distinct(array_append(tipos, 'cliente')) WHERE NOT ('cliente' = ANY(tipos));
+UPDATE usuarios SET tipos = array_append(tipos, 'cliente') WHERE NOT ('cliente' = ANY(tipos));
 
 -- Adicionar constraint para valores válidos
 ALTER TABLE usuarios DROP CONSTRAINT IF EXISTS validar_tipos;

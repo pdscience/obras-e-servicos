@@ -1,1 +1,1 @@
-ALTER TABLE servicos ADD COLUMN whatsapp_profissional VARCHAR(20) NULL DEFAULT NULL;
+ALTER TABLE servicos ADD COLUMN IF NOT EXISTS whatsapp_profissional VARCHAR(20) NULL DEFAULT NULL;

@@ -55,10 +55,14 @@ function canProceedStep2() {
 }
 
 async function submit() {
+  if (!auth.user?.id) {
+    emit('requestLogin')
+    return
+  }
   submitting.value = true
   try {
     await criarServico({
-      cliente_id: auth.user?.id ?? 'usr-exemplo',
+      cliente_id: auth.user.id,
       profissional_id: props.profissionalId || undefined,
       cliente_nome: form.value.cliente_nome,
       cliente_contato: form.value.cliente_contato || 'Não informado',

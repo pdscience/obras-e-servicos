@@ -15,9 +15,17 @@ export default async function (req: Request): Promise<Response> {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 })
   }
 
+  const webhookSecret = Deno.env.get('PAYMENT_WEBHOOK_SECRET')
+  const incomingSecret = req.headers.get('x-webhook-secret') || req.headers.get('authorization')?.replace('Bearer ', '')
+
+  if (webhookSecret && incomingSecret !== webhookSecret) {
+    return new Response(JSON.stringify({ error: 'Unauthorized webhook request' }), { status: 401 })
+  }
+
+  const serviceRoleKey = Deno.env.get('INSFORGE_SERVICE_ROLE_KEY') || Deno.env.get('ANON_KEY')!
   const client = createClient({
     baseUrl: Deno.env.get('INSFORGE_BASE_URL')!,
-    anonKey: Deno.env.get('ANON_KEY')!,
+    anonKey: serviceRoleKey,
   })
 
   try {
@@ -35,15 +43,19 @@ export default async function (req: Request): Promise<Response> {
     // Extrair metadados do pagamento
     const metadata = body.data?.metadata || body.metadata || {}
     const perfilId = metadata.perfil_id
-    const plano = metadata.plano // 'mensal' | 'anual'
+    const plano = (metadata.plano || '').toLowerCase()
 
-    if (!perfilId || !plano) {
-      return new Response(JSON.stringify({ error: 'Metadados incompletos' }), { status: 400 })
+    const planosValidos = ['bronze', 'prata', 'ouro', 'platina', 'diamante']
+    if (!perfilId || !planosValidos.includes(plano)) {
+      return new Response(JSON.stringify({ error: 'Metadados inválidos ou plano não suportado' }), { status: 400 })
     }
 
-    const dias = plano === 'anual' ? 365 : 30
+    const duracaoDias = metadata.duracao_dias ? Number(metadata.duracao_dias) : (metadata.periodo === 'anual' ? 365 : 30)
     const expiracao = new Date()
-    expiracao.setDate(expiracao.getDate() + dias)
+    expiracao.setDate(expiracao.getDate() + duracaoDias)
+
+    const limitesFotos: Record<string, number> = { bronze: 0, prata: 6, ouro: 12, platina: 12, diamante: 20 }
+    const limiteFotos = limitesFotos[plano] ?? 0
 
     const { error } = await client.database
       .from('perfis_profissional')
@@ -51,6 +63,7 @@ export default async function (req: Request): Promise<Response> {
         premium: true,
         premium_plano: plano,
         premium_expiracao: expiracao.toISOString(),
+        limite_fotos: limiteFotos,
         updated_at: new Date().toISOString(),
       })
       .eq('id', perfilId)

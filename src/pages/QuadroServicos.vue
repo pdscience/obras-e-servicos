@@ -119,6 +119,15 @@ async function handleAceitar(servico: ServiceRequest) {
 }
 
 function abrirNegociacao(servicoId: string) {
+  if (!perfilProfissionalId.value) {
+    alert('Faça login como profissional para negociar serviços.')
+    return
+  }
+  if (!hasPlan.value) {
+    alert('Adquira um plano (a partir do Bronze) para negociar serviços.')
+    emit('upgradePlan')
+    return
+  }
   servicoParaNegociar.value = servicoId
   whatsappModal.value = true
 }
@@ -131,6 +140,12 @@ async function handleNegociar() {
       alert('Faça login como profissional para negociar serviços.')
       whatsappModal.value = false
       whatsappNumber.value = ''
+      return
+    }
+    if (!hasPlan.value) {
+      alert('Adquira um plano (a partir do Bronze) para negociar serviços.')
+      emit('upgradePlan')
+      fecharNegociacao()
       return
     }
     await negociarServico(servicoParaNegociar.value, perfilProfissionalId.value, whatsappNumber.value.trim())

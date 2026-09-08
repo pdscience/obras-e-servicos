@@ -1,9 +1,16 @@
 import { createClient } from 'npm:@insforge/sdk'
 
-export default async function (_req: Request): Promise<Response> {
+export default async function (req: Request): Promise<Response> {
+  const cronSecret = Deno.env.get('CRON_SECRET')
+  const incomingSecret = req.headers.get('x-cron-secret') || req.headers.get('authorization')?.replace('Bearer ', '')
+  if (cronSecret && incomingSecret !== cronSecret) {
+    return new Response(JSON.stringify({ error: 'Unauthorized cron request' }), { status: 401 })
+  }
+
+  const serviceRoleKey = Deno.env.get('INSFORGE_SERVICE_ROLE_KEY') || Deno.env.get('ANON_KEY')!
   const client = createClient({
     baseUrl: Deno.env.get('INSFORGE_BASE_URL')!,
-    anonKey: Deno.env.get('ANON_KEY')!,
+    anonKey: serviceRoleKey,
   })
 
   const { data, error } = await client.database

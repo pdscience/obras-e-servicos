@@ -8,7 +8,6 @@ import {
   criarPerfilLojista,
   criarUsuario,
   obterUsuario,
-  ativarPremium,
 } from '../services/api'
 
 export interface AuthUser {
@@ -240,13 +239,6 @@ export const useAuthStore = defineStore('auth', () => {
             categoria: 'Geral',
             data_inicio_gratis: new Date().toISOString(),
           })
-          if (isInauguracao && perfil?.id) {
-            try {
-              await ativarPremium(perfil.id, 'ouro', 60)
-            } catch (e) {
-              console.warn('[register] Erro ao ativar premium para inauguração:', e)
-            }
-          }
         } catch (e) {
           console.warn('[register] Erro ao criar perfil profissional:', e)
         }

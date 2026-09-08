@@ -92,11 +92,13 @@ function matchesLocation(p: Professional): boolean {
 }
 
 const allCategoryPros = computed(() => {
+  if (realPros.value.length > 0) {
+    return realPros.value
+  }
   const mockPros = professionals.filter(p => p.mainCategoryId === mainCategory.value.id)
   const mockRanked = rankingProfissionais(mockPros, {}).map(m => m.professional)
-  const all = [...realPros.value, ...mockRanked]
   const seen = new Set<string>()
-  return all.filter(p => {
+  return mockRanked.filter(p => {
     if (seen.has(p.id)) return false
     seen.add(p.id)
     return true

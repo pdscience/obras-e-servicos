@@ -134,10 +134,15 @@ async function handleSubmitRequest() {
   const urgenciaMap: Record<string, string> = { Flexível: 'baixa', 'Esta semana': 'media', Urgente: 'alta' }
   const urgenciaValida = urgenciaMap[requestUrgencia.value] || 'media'
   
+  if (!currentUserId.value) {
+    mensagem.value = 'Faça login para solicitar um orçamento.'
+    mensagemTipo.value = 'erro'
+    return
+  }
+
   try {
     await criarServico({
-      cliente_id: currentUserId.value || 'usr-exemplo',
-      profissional_id: pro.value.id,
+      cliente_id: currentUserId.value,
       cliente_nome: auth.user?.nome || 'Cliente',
       cliente_contato: requestForm.value.phone,
       categoria: pro.value.category,
@@ -188,11 +193,16 @@ async function handleSubmitRequest() {
 
 async function handleSubmitReview() {
   if (!reviewForm.value.comment || !reviewForm.value.serviceType || !pro.value) return
+  if (!isLoggedIn.value) {
+    mensagem.value = 'Faça login para enviar uma avaliação.'
+    mensagemTipo.value = 'erro'
+    return
+  }
   try {
     await criarReview({
       profissional_id: pro.value.id,
-      cliente_nome: 'Você',
-      cliente_avatar: '',
+      cliente_nome: auth.user?.nome || 'Cliente',
+      cliente_avatar: auth.user?.avatar_url || '',
       rating: reviewForm.value.rating,
       comment: reviewForm.value.comment,
       service_type: reviewForm.value.serviceType,

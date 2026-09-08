@@ -9,7 +9,7 @@ import {
   Search, Globe, Play
 } from '@lucide/vue'
 import type { PerfilLojista, Produto } from '../types'
-import { listarProdutos, mapProdutoToProduto, listarLojistas, mapLojistaToPerfil } from '../services/api'
+import { listarProdutos, mapProdutoToProduto, obterPerfilLojistaPorId } from '../services/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -24,8 +24,7 @@ const showBannerFullscreen = ref(false)
 onMounted(async () => {
   try {
     const id = route.params.id as string
-    const lojistas = await listarLojistas()
-    const found = lojistas.map(mapLojistaToPerfil).find(l => l.id === id)
+    const found = await obterPerfilLojistaPorId(id)
     if (found) {
       loja.value = found
       const data = await listarProdutos(found.id)

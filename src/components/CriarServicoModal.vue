@@ -30,10 +30,11 @@ const form = ref({
 const categoriasList = mainCategories.map(c => c.name).sort()
 
 async function submit() {
+  if (!props.userId) return
   submitting.value = true
   try {
     await criarServico({
-      cliente_id: props.userId ?? 'usr-exemplo',
+      cliente_id: props.userId,
       cliente_nome: form.value.cliente_nome,
       cliente_contato: form.value.cliente_contato,
       categoria: form.value.categoria,

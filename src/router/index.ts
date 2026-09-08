@@ -111,4 +111,25 @@ const router = createRouter({
   },
 })
 
+router.beforeEach(async (to, _from, next) => {
+  if (to.meta.requiresAuth) {
+    const { useAuthStore } = await import('@/stores/auth')
+    const auth = useAuthStore()
+    await auth.ensureInitialized()
+
+    if (!auth.isLoggedIn) {
+      return next({ name: 'login', query: { redirect: to.fullPath } })
+    }
+
+    const requiredRole = to.meta.role as string | undefined
+    if (requiredRole && !auth.user?.tipos.includes(requiredRole)) {
+      if (auth.user?.tipos.includes('profissional')) return next({ name: 'dashboard' })
+      if (auth.user?.tipos.includes('lojista')) return next({ name: 'lojista-dashboard' })
+      return next({ name: 'cliente-dashboard' })
+    }
+  }
+
+  next()
+})
+
 export default router

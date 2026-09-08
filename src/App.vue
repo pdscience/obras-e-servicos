@@ -2,7 +2,6 @@
 import { onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from './stores/auth'
-import { seedCategoriasProfissoes, migrarPlanos } from './services/api'
 import Header from './components/Header.vue'
 import Footer from './components/Footer.vue'
 import SidebarMenu from './components/SidebarMenu.vue'
@@ -18,8 +17,6 @@ const showHeaderFooter = computed(() => {
 
 onMounted(() => {
   auth.ensureInitialized()
-  seedCategoriasProfissoes().catch(() => {})
-  migrarPlanos().catch(() => {})
 })
 </script>
 

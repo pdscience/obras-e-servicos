@@ -70,13 +70,17 @@ export async function deletarPagina(id: string) {
 
 // ─── Quadro de Serviços (Orçamento Aberto) ───
 
-function mapServico(row: Record<string, unknown>): ServiceRequest {
+function mapServico(row: Record<string, unknown>, maskSensitive = false): ServiceRequest {
+  const contato = maskSensitive && row.status === 'aberto'
+    ? 'Disponível após aceitar'
+    : (row.cliente_contato as string)
+
   return {
     id: row.id as string,
     cliente_id: row.cliente_id as string,
     profissional_id: row.profissional_id as string | null,
     cliente_nome: row.cliente_nome as string,
-    cliente_contato: row.cliente_contato as string,
+    cliente_contato: contato,
     categoria: row.categoria as string,
     subcategoria: row.subcategoria as string | null,
     descricao: row.descricao as string,
@@ -140,7 +144,7 @@ export async function listarServicosAbertos(filtros?: {
   }
   const { data, error } = await query
   if (error) throw error
-  let result = (data ?? []).map(mapServico)
+  let result = (data ?? []).map(r => mapServico(r, true))
   const ufFilter = filtros?.uf
   if (ufFilter) {
     result = result.filter(s => s.endereco.includes(`- ${ufFilter}`) || s.endereco.endsWith(ufFilter))
@@ -267,27 +271,6 @@ export async function criarReview(review: Omit<ReviewDB, 'id' | 'created_at'>) {
     .select()
     .single()
   if (error) throw error
-
-  if (review.profissional_id) {
-    try {
-      const { data: avaliacoes, error: errAval } = await insforge.database
-        .from('reviews')
-        .select('rating')
-        .eq('profissional_id', review.profissional_id)
-      if (!errAval && avaliacoes) {
-        const notas = avaliacoes as Array<{ rating: number | string }>
-        const total = notas.length
-        const soma = notas.reduce((acc, r) => acc + (Number(r.rating) || 0), 0)
-        const media = total > 0 ? Math.round((soma / total) * 100) / 100 : 0
-        await insforge.database
-          .from('perfis_profissional')
-          .update({ avaliacao_media: media, total_avaliacoes: total })
-          .eq('id', review.profissional_id)
-      }
-    } catch {
-      // Falha ao atualizar o agregado não deve impedir que a avaliação seja salva
-    }
-  }
 
   return mapReview(data)
 }
@@ -484,13 +467,29 @@ export async function criarPerfilUsuario(perfil: {
 }
 
 export async function obterPerfilUsuario(usuarioId: string) {
-  const { data, error } = await insforge.database
+  const { data: usuario, error: errUsuario } = await insforge.database
     .from('usuarios')
     .select('*')
     .eq('id', usuarioId)
     .maybeSingle()
-  if (error) throw error
-  return data
+  if (errUsuario) throw errUsuario
+
+  const { data: perfil } = await insforge.database
+    .from('perfis_usuario')
+    .select('*')
+    .eq('usuario_id', usuarioId)
+    .maybeSingle()
+
+  if (!usuario && !perfil) return null
+  return {
+    ...usuario,
+    cpf: (usuario as any)?.cpf || (perfil as any)?.cpf || null,
+    data_nascimento: (usuario as any)?.data_nascimento || (perfil as any)?.data_nascimento || null,
+    telefone: (usuario as any)?.telefone || (perfil as any)?.telefone || null,
+    uf: (usuario as any)?.uf || (perfil as any)?.uf || null,
+    cidade: (usuario as any)?.cidade || (perfil as any)?.cidade || null,
+    endereco: (usuario as any)?.endereco || ((perfil as any)?.enderecos?.[0]?.logradouro ?? null),
+  }
 }
 
 export async function atualizarPerfilUsuario(usuarioId: string, atualizacao: Partial<{
@@ -501,6 +500,8 @@ export async function atualizarPerfilUsuario(usuarioId: string, atualizacao: Par
   uf: string
   cidade: string
   endereco: string
+  bairro: string
+  cep: string
 }>) {
   const str = (v: string | undefined) => v !== undefined ? (v.trim() === '' ? null : v.trim()) : undefined
 
@@ -512,6 +513,8 @@ export async function atualizarPerfilUsuario(usuarioId: string, atualizacao: Par
   if (atualizacao.uf !== undefined) updateData.uf = str(atualizacao.uf)
   if (atualizacao.cidade !== undefined) updateData.cidade = str(atualizacao.cidade)
   if (atualizacao.endereco !== undefined) updateData.endereco = str(atualizacao.endereco)
+  if (atualizacao.bairro !== undefined) updateData.bairro = str(atualizacao.bairro)
+  if (atualizacao.cep !== undefined) updateData.cep = str(atualizacao.cep)
 
   if (Object.keys(updateData).length === 0) return
 
@@ -520,6 +523,21 @@ export async function atualizarPerfilUsuario(usuarioId: string, atualizacao: Par
     .update(updateData)
     .eq('id', usuarioId)
   if (error) throw error
+
+  // Mantém perfis_usuario sincronizado
+  await insforge.database
+    .from('perfis_usuario')
+    .upsert({
+      usuario_id: usuarioId,
+      nome: updateData.nome,
+      cpf: updateData.cpf,
+      data_nascimento: updateData.data_nascimento,
+      telefone: updateData.telefone,
+      uf: updateData.uf,
+      cidade: updateData.cidade,
+      enderecos: updateData.endereco ? [{ logradouro: updateData.endereco, cidade: updateData.cidade, uf: updateData.uf }] : undefined,
+    }, { onConflict: 'usuario_id' })
+    .catch(() => {})
 }
 
 export async function criarPerfilProfissional(perfil: {
@@ -625,26 +643,12 @@ export async function atualizarPerfilProfissional(id: string, atualizacao: Parti
 // ─── Premium / Planos ───
 
 export async function ativarPremium(
-  perfilId: string,
-  plano: PlanoProfissional,
-  diasExpiracao: number
+  _perfilId: string,
+  _plano: PlanoProfissional,
+  _diasExpiracao: number
 ) {
-  const limiteFotos = limiteFotosPlano(plano)
-  const expiracao = new Date()
-  expiracao.setDate(expiracao.getDate() + diasExpiracao)
-  const { data, error } = await insforge.database
-    .from('perfis_profissional')
-    .update({
-      premium: true,
-      premium_plano: plano,
-      premium_expiracao: expiracao.toISOString(),
-      limite_fotos: limiteFotos,
-    })
-    .eq('id', perfilId)
-    .select()
-    .single()
-  if (error) throw error
-  return mapPerfilProfissional(data)
+  console.warn('[Segurança] A ativação de planos é processada exclusivamente no backend via webhook de pagamento.')
+  throw new Error('A ativação de planos é processada exclusivamente via confirmação de pagamento.')
 }
 
 export async function verificarPremium(perfilId: string) {
@@ -822,6 +826,17 @@ export async function obterPerfilLojista(usuarioId: string) {
     .from('perfis_lojista')
     .select('*')
     .eq('usuario_id', usuarioId)
+    .maybeSingle()
+  if (error) throw error
+  if (!data) return null
+  return mapLojistaToPerfil(data)
+}
+
+export async function obterPerfilLojistaPorId(id: string) {
+  const { data, error } = await insforge.database
+    .from('perfis_lojista')
+    .select('*')
+    .eq('id', id)
     .maybeSingle()
   if (error) throw error
   if (!data) return null
