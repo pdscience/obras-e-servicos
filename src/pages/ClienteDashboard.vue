@@ -4,14 +4,14 @@ import {
   ClipboardList, Clock, CheckCircle2,
   User,
   Briefcase, DollarSign, Search, ArrowRight,
-  MapPin, Calendar, MessageCircle, Star, X, Crown, AlertTriangle
+  MapPin, Calendar, MessageCircle, Star, X, Crown, AlertTriangle, ChevronDown
 } from '@lucide/vue'
-import { listarServicosDoCliente, obterPerfilProfissionalPorId, obterPerfilUsuario, atualizarPerfilUsuario, atualizarStatusServico, criarReview, listarProfissionais, mapPerfilToProfessional, criarPerfilUsuario } from '../services/api'
+import { listarServicosDoCliente, obterPerfilProfissionalPorId, obterPerfilUsuario, atualizarPerfilUsuario, atualizarStatusServico, criarReview, listarProfissionais, mapPerfilToProfessional, criarPerfilUsuario, listarTodasProfissoes } from '../services/api'
 import { getCitiesByUf } from '../data/cities'
 import { useAuthStore } from '../stores/auth'
 import { useRouter, useRoute } from 'vue-router'
 import SolicitarOrcamentoModal from '@/components/SolicitarOrcamentoModal.vue'
-import type { ServiceRequest, Professional } from '../types'
+import type { ServiceRequest, Professional, ProfissaoDB } from '../types'
 
 defineEmits<{ back: [] }>()
 
@@ -26,24 +26,45 @@ const profissionaisAceitos = ref<Record<string, Professional>>({})
 const view = ref<'profissionais' | 'pedidos'>('profissionais')
 const profissionais = ref<Professional[]>([])
 const proLoading = ref(false)
-const searchPro = ref('')
+
+// Filtros de busca de profissionais (profissão, UF e município de cadastro)
+const filtroProfissao = ref('')
+const filtroUf = ref('')
+const filtroMunicipio = ref('')
+const profissoesOptions = ref<string[]>([])
+const municipiosOptions = ref<string[]>([])
+
+watch(filtroUf, async (newUf, oldUf) => {
+  if (newUf !== oldUf) filtroMunicipio.value = ''
+  municipiosOptions.value = await getCitiesByUf(newUf)
+})
+
+const temFiltroAtivo = computed(() => !!(filtroProfissao.value || filtroUf.value || filtroMunicipio.value))
+
+function limparFiltros() {
+  filtroProfissao.value = ''
+  filtroUf.value = ''
+  filtroMunicipio.value = ''
+}
 
 const filteredProfissionais = computed(() => {
-  const term = searchPro.value.trim().toLowerCase()
-  if (!term) return profissionais.value
-  return profissionais.value.filter(p =>
-    p.name.toLowerCase().includes(term) ||
-    p.category.toLowerCase().includes(term) ||
-    p.subcategory.toLowerCase().includes(term) ||
-    p.location.toLowerCase().includes(term)
-  )
+  return profissionais.value.filter(p => {
+    if (filtroProfissao.value && !(p.specialties?.includes(filtroProfissao.value) || p.category === filtroProfissao.value)) return false
+    if (filtroUf.value && p.uf !== filtroUf.value) return false
+    if (filtroMunicipio.value && (p.cidade ?? '') !== filtroMunicipio.value) return false
+    return true
+  })
 })
 
 async function carregarProfissionais() {
   proLoading.value = true
   try {
-    const perfis = await listarProfissionais()
+    const [perfis, profissoes] = await Promise.all([
+      listarProfissionais(),
+      listarTodasProfissoes().catch(() => [] as ProfissaoDB[]),
+    ])
     profissionais.value = perfis.map(mapPerfilToProfessional)
+    profissoesOptions.value = [...new Set(profissoes.map(pr => pr.nome))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
   } catch (e) {
     console.error('Erro ao carregar profissionais:', e)
   } finally {
@@ -359,10 +380,40 @@ function fecharReview() {
 
 <!-- Profissionais disponíveis (cards) -->
       <div v-if="view === 'profissionais'" class="space-y-5">
-        <div class="relative">
-          <Search class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-subtle)]" />
-          <input v-model="searchPro" type="text" placeholder="Buscar profissional, serviço ou cidade..."
-            class="w-full pl-12 pr-4 py-3 bg-[var(--bg-raised)] border border-[var(--border-raised)] rounded-xl text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-gold)] focus:border-transparent placeholder-[var(--text-subtle)]" />
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="relative">
+            <Briefcase class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-subtle)] pointer-events-none" />
+            <select v-model="filtroProfissao" aria-label="Filtrar por profissão"
+              class="w-full pl-12 pr-9 py-3 bg-[var(--bg-raised)] border border-[var(--border-raised)] rounded-xl text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-gold)] focus:border-transparent appearance-none cursor-pointer truncate">
+              <option value="">Todas as profissões</option>
+              <option v-for="prof in profissoesOptions" :key="prof" :value="prof">{{ prof }}</option>
+            </select>
+            <ChevronDown class="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-subtle)] pointer-events-none" />
+          </div>
+          <div class="relative">
+            <MapPin class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-subtle)] pointer-events-none" />
+            <select v-model="filtroUf" aria-label="Filtrar por UF de cadastro"
+              class="w-full pl-12 pr-9 py-3 bg-[var(--bg-raised)] border border-[var(--border-raised)] rounded-xl text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-gold)] focus:border-transparent appearance-none cursor-pointer truncate">
+              <option value="">Todos os estados</option>
+              <option v-for="uf in ufList" :key="uf.sigla" :value="uf.sigla">{{ uf.nome }} ({{ uf.sigla }})</option>
+            </select>
+            <ChevronDown class="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-subtle)] pointer-events-none" />
+          </div>
+          <div class="relative">
+            <MapPin class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-subtle)] pointer-events-none" />
+            <select v-model="filtroMunicipio" aria-label="Filtrar por município" :disabled="!filtroUf"
+              class="w-full pl-12 pr-9 py-3 bg-[var(--bg-raised)] border border-[var(--border-raised)] rounded-xl text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-gold)] focus:border-transparent appearance-none cursor-pointer truncate disabled:opacity-60 disabled:cursor-not-allowed">
+              <option value="">{{ filtroUf ? 'Todos os municípios' : 'Selecione a UF primeiro' }}</option>
+              <option v-for="cidade in municipiosOptions" :key="cidade" :value="cidade">{{ cidade }}</option>
+            </select>
+            <ChevronDown class="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-subtle)] pointer-events-none" />
+          </div>
+        </div>
+        <div v-if="temFiltroAtivo" class="flex items-center justify-between">
+          <p class="text-xs text-[var(--text-muted)]">{{ filteredProfissionais.length }} profissional(is) encontrado(s)</p>
+          <button @click="limparFiltros" class="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--accent-gold)] hover:text-[var(--text-secondary)] transition-colors">
+            <X class="w-3.5 h-3.5" /> Limpar filtros
+          </button>
         </div>
 
         <div v-if="proLoading" class="text-center py-16">
@@ -373,7 +424,7 @@ function fecharReview() {
         <div v-else-if="filteredProfissionais.length === 0" class="text-center py-16 bg-[var(--bg-card)] border border-[var(--border-default)] rounded-xl">
           <User class="w-16 h-16 text-[var(--border-default)] mx-auto mb-4" />
           <h3 class="text-lg font-semibold text-[var(--text-secondary)] mb-2">Nenhum profissional encontrado</h3>
-          <p class="text-[var(--text-muted)] text-sm">Tente ajustar a busca ou volte mais tarde.</p>
+          <p class="text-[var(--text-muted)] text-sm">{{ temFiltroAtivo ? 'Tente ajustar ou limpar os filtros para ver mais profissionais.' : 'Volte mais tarde.' }}</p>
         </div>
 
         <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">

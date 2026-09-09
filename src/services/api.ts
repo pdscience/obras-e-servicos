@@ -70,7 +70,7 @@ export async function deletarPagina(id: string) {
 
 // ─── Quadro de Serviços (Orçamento Aberto) ───
 
-function mapServico(row: Record<string, unknown>, maskSensitive = false): ServiceRequest {
+function mapServico(row: Record<string, unknown>, maskSensitive?: boolean): ServiceRequest {
   const contato = maskSensitive && row.status === 'aberto'
     ? 'Disponível após aceitar'
     : (row.cliente_contato as string)
@@ -215,7 +215,7 @@ export async function listarServicosDoProfissional(profissionalId: string) {
     .eq('profissional_id', profissionalId)
     .order('created_at', { ascending: false })
   if (error) throw error
-  return (data ?? []).map(mapServico)
+  return (data ?? []).map(row => mapServico(row))
 }
 
 export async function listarServicosDoCliente(clienteId: string) {
@@ -225,7 +225,7 @@ export async function listarServicosDoCliente(clienteId: string) {
     .eq('cliente_id', clienteId)
     .order('created_at', { ascending: false })
   if (error) throw error
-  return (data ?? []).map(mapServico)
+  return (data ?? []).map(row => mapServico(row))
 }
 
 // ─── Avaliações / Reviews ───
@@ -317,6 +317,10 @@ export interface PerfilProfissionalDB {
   tempo_resposta: string | null
   uf: string | null
   cidade: string | null
+  cep: string | null
+  endereco: string | null
+  numero: string | null
+  bairro: string | null
   portfolio: Record<string, unknown>[]
   avaliacao_media: number
   total_avaliacoes: number
@@ -368,6 +372,10 @@ function mapPerfilProfissional(row: Record<string, unknown>): PerfilProfissional
     tempo_resposta: row.tempo_resposta as string | null,
     uf: row.uf as string | null,
     cidade: row.cidade as string | null,
+    cep: (row.cep as string | null) ?? null,
+    endereco: (row.endereco as string | null) ?? null,
+    numero: (row.numero as string | null) ?? null,
+    bairro: (row.bairro as string | null) ?? null,
     portfolio: (row.portfolio as Record<string, unknown>[]) ?? [],
     avaliacao_media: row.avaliacao_media as number,
     total_avaliacoes: row.total_avaliacoes as number,
@@ -525,7 +533,8 @@ export async function atualizarPerfilUsuario(usuarioId: string, atualizacao: Par
   if (error) throw error
 
   // Mantém perfis_usuario sincronizado
-  await insforge.database
+  try {
+    await insforge.database
     .from('perfis_usuario')
     .upsert({
       usuario_id: usuarioId,
@@ -537,7 +546,9 @@ export async function atualizarPerfilUsuario(usuarioId: string, atualizacao: Par
       cidade: updateData.cidade,
       enderecos: updateData.endereco ? [{ logradouro: updateData.endereco, cidade: updateData.cidade, uf: updateData.uf }] : undefined,
     }, { onConflict: 'usuario_id' })
-    .catch(() => {})
+  } catch (e) {
+    // Sincronização secundaria - falhas sao ignoradas
+  }
 }
 
 export async function criarPerfilProfissional(perfil: {
@@ -620,6 +631,10 @@ export async function atualizarPerfilProfissional(id: string, atualizacao: Parti
   disponivel: boolean
   uf: string
   cidade: string
+  cep: string
+  endereco: string
+  numero: string
+  bairro: string
   avatar_url: string
   whatsapp: string
   instagram: string
@@ -630,12 +645,34 @@ export async function atualizarPerfilProfissional(id: string, atualizacao: Parti
   banner_url: string
   portfolio: Record<string, unknown>[]
 }>) {
-  const { data, error } = await insforge.database
+  const payload = { ...atualizacao, updated_at: new Date().toISOString() }
+  let { data, error } = await insforge.database
     .from('perfis_profissional')
-    .update({ ...atualizacao, updated_at: new Date().toISOString() })
+    .update(payload)
     .eq('id', id)
     .select()
     .single()
+
+  // Fallback: se as colunas de endereço ainda não existirem no banco
+  // (migration 20260908000001_add-endereco-perfil-profissional.sql pendente),
+  // tenta salvar novamente sem os novos campos para não bloquear o perfil.
+  if (error) {
+    const msg = (error.message || '').toLowerCase()
+    const colunaFaltando = msg.includes('pgrst204') || msg.includes('column') || msg.includes('schema cache')
+    if (colunaFaltando && ('cep' in payload || 'endereco' in payload || 'numero' in payload || 'bairro' in payload)) {
+      console.warn('[api] Colunas de endereço ausentes — aplique a migration 20260908000001. Salvando sem os campos de endereço.')
+      const { cep: _cep, endereco: _endereco, numero: _numero, bairro: _bairro, ...resto } = payload
+      const retry = await insforge.database
+        .from('perfis_profissional')
+        .update(resto)
+        .eq('id', id)
+        .select()
+        .single()
+      data = retry.data
+      error = retry.error
+    }
+  }
+
   if (error) throw error
   return mapPerfilProfissional(data)
 }
@@ -713,6 +750,11 @@ export function mapPerfilToProfessional(p: PerfilProfissionalDB): Professional {
     completedJobs: p.total_servicos,
     location: [p.cidade, p.uf].filter(Boolean).join(', ') || 'Localização não informada',
     uf: p.uf ?? '',
+    cidade: p.cidade ?? '',
+    cep: p.cep ?? undefined,
+    endereco: p.endereco ?? undefined,
+    numero: p.numero ?? undefined,
+    bairro: p.bairro ?? undefined,
     lat: 0,
     lng: 0,
     pricePerHour: p.preco_hora ?? 0,

@@ -9,14 +9,32 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/login',
     name: 'login',
+    component: () => import('@/pages/ProfileSelectionPage.vue'),
+  },
+  {
+    path: '/entrar',
+    name: 'auth-login',
     component: () => import('@/pages/AuthPage.vue'),
     props: { mode: 'login' },
+  },
+  {
+    path: '/acessar',
+    name: 'access',
+    component: () => import('@/pages/AccessPage.vue'),
   },
   {
     path: '/cadastro',
     name: 'register',
     component: () => import('@/pages/AuthPage.vue'),
     props: { mode: 'register' },
+    beforeEnter: (to) => {
+      // A seleção de tipo de conta é feita na página de acesso (/login);
+      // o cadastro abre direto o formulário quando o tipo já foi escolhido.
+      if (!to.query.tipo) {
+        return { name: 'login', query: { ...to.query, acao: 'registrar' } }
+      }
+      return true
+    },
   },
   {
     path: '/cadastro-profissional',
@@ -111,25 +129,25 @@ const router = createRouter({
   },
 })
 
-router.beforeEach(async (to, _from, next) => {
+router.beforeEach(async (to) => {
   if (to.meta.requiresAuth) {
     const { useAuthStore } = await import('@/stores/auth')
     const auth = useAuthStore()
     await auth.ensureInitialized()
 
     if (!auth.isLoggedIn) {
-      return next({ name: 'login', query: { redirect: to.fullPath } })
+      return { name: 'login', query: { redirect: to.fullPath } }
     }
 
     const requiredRole = to.meta.role as string | undefined
     if (requiredRole && !auth.user?.tipos.includes(requiredRole)) {
-      if (auth.user?.tipos.includes('profissional')) return next({ name: 'dashboard' })
-      if (auth.user?.tipos.includes('lojista')) return next({ name: 'lojista-dashboard' })
-      return next({ name: 'cliente-dashboard' })
+      if (auth.user?.tipos.includes('profissional')) return { name: 'dashboard' }
+      if (auth.user?.tipos.includes('lojista')) return { name: 'lojista-dashboard' }
+      return { name: 'cliente-dashboard' }
     }
   }
 
-  next()
+  return true
 })
 
 export default router

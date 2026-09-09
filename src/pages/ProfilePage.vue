@@ -3,9 +3,9 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   Star, MapPin, CheckCircle2, Crown, Clock, Calendar,
-  Phone, Share2, Heart, Shield, Award,
-  ChevronRight, Send, Image, ThumbsUp, AlertCircle,
-  Briefcase, ExternalLink
+  Phone, Share2, Shield, Award, MessageCircle,
+  ChevronRight, Send, Image, ThumbsUp,
+  Briefcase
 } from '@lucide/vue'
 import type { Professional, PerfilLojista, Produto } from '../types'
 import { criarServico, criarReview, listarLojistas, listarProdutos, mapLojistaToPerfil, mapProdutoToProduto, obterProfissionalPorId } from '../services/api'
@@ -57,7 +57,7 @@ onMounted(async () => {
     loadingProfile.value = false
   }
 })
-const activeTab = ref<'about' | 'portfolio' | 'reviews' | 'experience'>('about')
+const activeTab = ref<'about' | 'portfolio' | 'reviews'>('about')
 const pro = computed(() => professional.value)
 
 const planoNomePro = computed(() => {
@@ -74,10 +74,6 @@ const planoCoresPro = computed(() => {
 
 const isLoggedIn = computed(() => auth.isLoggedIn || props.isLoggedIn)
 const currentUserId = computed(() => props.userId || auth.user?.id || '')
-
-const isOwner = computed(() => {
-  return isLoggedIn.value && currentUserId.value && pro.value?.usuario_id === currentUserId.value
-})
 
 const showRequestModal = ref(props.autoOpenRequest ?? false)
 const requestStep = ref(1)
@@ -104,6 +100,14 @@ function goBack() {
   } else {
     router.push({ name: 'home' })
   }
+}
+
+function whatsappUrl(num?: string) {
+  if (!num) return '#'
+  const digits = num.replace(/\D/g, '')
+  if (!digits) return '#'
+  const comCodigo = digits.startsWith('55') ? digits : `55${digits}`
+  return `https://wa.me/${comCodigo}`
 }
 
 function handleRequestService() {
@@ -276,7 +280,20 @@ function fecharMensagem() {
             </div>
           </div>
           <div class="flex flex-row md:flex-col gap-2">
-            <button class="p-2 bg-[var(--bg-raised)] hover:bg-[var(--border-default)] rounded-lg transition-colors"><Heart class="w-5 h-5 text-[var(--text-muted)]" /></button>
+            <button @click="handleRequestService" class="px-5 py-2.5 bg-[var(--accent-gold)] text-[var(--text-on-accent)] font-semibold rounded-xl hover:shadow-lg transition-all text-sm">Solicitar Orçamento</button>
+            <a
+              v-if="pro.whatsapp"
+              :href="whatsappUrl(pro.whatsapp)"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--accent-green)] text-white hover:opacity-90 transition-opacity text-sm font-medium"
+              title="Falar com o profissional no WhatsApp"
+            >
+              <MessageCircle class="w-4 h-4" /> WhatsApp
+            </a>
+            <button v-else class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--bg-raised)] text-[var(--text-subtle)] text-sm font-medium cursor-not-allowed" title="Este profissional ainda não cadastrou WhatsApp" disabled>
+              <MessageCircle class="w-4 h-4" /> WhatsApp
+            </button>
             <button class="inline-flex items-center gap-2 px-3 py-2 bg-[var(--bg-raised)] hover:bg-[var(--border-default)] rounded-lg transition-colors text-sm text-[var(--text-muted)]"><Share2 class="w-5 h-5" /> Compartilhar</button>
           </div>
         </div>
@@ -284,46 +301,55 @@ function fecharMensagem() {
     </div>
 
     <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div class="lg:col-span-2 space-y-6">
+      <div class="space-y-6">
+        <div>
           <div class="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-xl shadow-card overflow-hidden">
             <div class="flex border-b border-[var(--border-default)]">
-              <button v-for="tab in [{ id: 'about', label: 'Sobre' }, { id: 'experience', label: 'Experiência' }, { id: 'portfolio', label: 'Portfólio' }, { id: 'reviews', label: 'Avaliações' }]" :key="tab.id" @click="activeTab = tab.id as typeof activeTab" :class="['flex-1 px-6 py-4 text-sm font-medium transition-colors', activeTab === tab.id ? 'text-[var(--accent-gold)] border-b-2 border-[var(--accent-gold)]' : 'text-[var(--text-subtle)] hover:text-[var(--text-muted)]']">{{ tab.label }}</button>
+              <button v-for="tab in [{ id: 'about', label: 'Sobre' }, { id: 'portfolio', label: 'Portfólio' }, { id: 'reviews', label: 'Avaliações' }]" :key="tab.id" @click="activeTab = tab.id as typeof activeTab" :class="['flex-1 px-6 py-4 text-sm font-medium transition-colors', activeTab === tab.id ? 'text-[var(--accent-gold)] border-b-2 border-[var(--accent-gold)]' : 'text-[var(--text-subtle)] hover:text-[var(--text-muted)]']">{{ tab.label }}</button>
             </div>
             <div class="p-6">
               <div v-if="activeTab === 'about'" class="space-y-6">
                 <div><h3 class="font-semibold text-[var(--text-secondary)] mb-3">Descrição</h3><p class="text-[var(--text-muted)] leading-relaxed">{{ pro.description }}</p></div>
-                <div><h3 class="font-semibold text-[var(--text-secondary)] mb-3">Especialidades</h3><div class="flex flex-wrap gap-2"><span v-for="(spec, i) in pro.specialties" :key="i" class="px-3 py-1.5 bg-[color-mix(in srgb,var(--accent-gold) 10%,transparent)] text-[var(--accent-gold)] rounded-lg text-sm font-medium">{{ spec }}</span></div></div>
-                <div><h3 class="font-semibold text-[var(--text-secondary)] mb-3">Certificações</h3><div class="space-y-2"><div v-for="(cert, i) in pro.certifications" :key="i" class="flex items-center gap-2 text-[var(--text-muted)]"><Award class="w-4 h-4 text-[var(--accent-green)]" /> {{ cert }}</div></div></div>
-                <div><h3 class="font-semibold text-[var(--text-secondary)] mb-3">Verificações</h3><div class="grid grid-cols-2 gap-3"><div v-for="(item, i) in [{ label: 'Identidade Verificada', verified: true }, { label: 'Telefone Verificado', verified: true }, { label: 'E-mail Verificado', verified: true }, { label: 'Endereço Verificado', verified: pro.verified }]" :key="i" :class="['flex items-center gap-2 p-3 rounded-lg', item.verified ? 'bg-[color-mix(in srgb,var(--accent-green) 10%,transparent)]' : 'bg-[var(--bg-raised)]']"><Shield :class="['w-4 h-4', item.verified ? 'text-[var(--accent-green)]' : 'text-[var(--text-subtle)]']" /><span :class="['text-sm', item.verified ? 'text-[var(--accent-green)]' : 'text-[var(--text-subtle)]']">{{ item.label }}</span></div></div></div>
-              </div>
-              <div v-if="activeTab === 'experience'" class="space-y-6">
-                <div class="flex items-center gap-3 p-4 bg-[var(--bg-raised)] border border-[var(--border-default)] rounded-xl">
-                  <Briefcase class="w-10 h-10 text-[var(--accent-gold)]" />
-                  <div>
-                    <p class="text-2xl font-bold text-[var(--text-primary)]">{{ pro.yearsExperience }} anos</p>
-                    <p class="text-sm text-[var(--text-muted)]">de experiência profissional</p>
-                  </div>
-                </div>
-                <div class="space-y-4">
-                  <h3 class="font-semibold text-[var(--text-secondary)]">Histórico Profissional</h3>
-                  <div v-for="exp in pro.experience" :key="exp.id" class="relative pl-6 pb-6 border-l-2 border-[var(--border-default)] last:pb-0">
-                    <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-[var(--accent-gold)] border-2 border-[var(--bg-page)]"></div>
-                    <div class="bg-[var(--bg-raised)] border border-[var(--border-default)] rounded-xl p-4">
-                      <div class="flex items-start justify-between mb-2">
-                        <div>
-                          <h4 class="font-medium text-[var(--text-primary)]">{{ exp.role }}</h4>
-                          <p class="text-sm text-[var(--accent-gold)]">{{ exp.company }}</p>
-                        </div>
-                        <span class="text-xs text-[var(--text-subtle)] whitespace-nowrap">{{ exp.startDate }}{{ exp.endDate ? ' - ' + exp.endDate : ' - Presente' }}</span>
-                      </div>
-                      <p class="text-sm text-[var(--text-muted)]">{{ exp.description }}</p>
+                <div v-if="pro.cidade || pro.uf || pro.endereco || pro.bairro">
+                  <h3 class="font-semibold text-[var(--text-secondary)] mb-3">Localização de Atendimento</h3>
+                  <div class="flex items-start gap-3 p-4 bg-[var(--bg-raised)] border border-[var(--border-default)] rounded-xl">
+                    <div class="w-10 h-10 bg-[color-mix(in srgb,var(--accent-gold) 10%,transparent)] rounded-xl flex items-center justify-center flex-shrink-0">
+                      <MapPin class="w-5 h-5 text-[var(--accent-gold)]" />
+                    </div>
+                    <div class="min-w-0">
+                      <p class="font-semibold text-[var(--text-primary)]">{{ [pro.cidade, pro.uf].filter(Boolean).join(', ') || 'Município/UF não informados' }}</p>
+                      <p v-if="pro.endereco || pro.bairro" class="text-sm text-[var(--text-muted)] mt-1">{{ [[pro.endereco, pro.numero].filter(Boolean).join(', '), pro.bairro].filter(Boolean).join(' · ') }}</p>
+                      <p v-if="pro.cep" class="text-xs text-[var(--text-subtle)] mt-1">CEP {{ pro.cep }}</p>
                     </div>
                   </div>
                 </div>
-                <div class="flex items-center gap-2 p-3 bg-[var(--bg-card)] border border-[var(--border-default)] rounded-lg">
-                  <CheckCircle2 class="w-4 h-4 text-[var(--accent-green)]" />
-                  <span class="text-sm text-[var(--text-muted)]">{{ pro.completedJobs }} serviços concluídos</span>
+                <div><h3 class="font-semibold text-[var(--text-secondary)] mb-3">Especialidades</h3><div class="flex flex-wrap gap-2"><span v-for="(spec, i) in pro.specialties" :key="i" class="px-3 py-1.5 bg-[color-mix(in srgb,var(--accent-gold) 10%,transparent)] text-[var(--accent-gold)] rounded-lg text-sm font-medium">{{ spec }}</span></div></div>
+                <div><h3 class="font-semibold text-[var(--text-secondary)] mb-3">Certificações</h3><div class="space-y-2"><div v-for="(cert, i) in pro.certifications" :key="i" class="flex items-center gap-2 text-[var(--text-muted)]"><Award class="w-4 h-4 text-[var(--accent-green)]" /> {{ cert }}</div></div></div>
+                <div><h3 class="font-semibold text-[var(--text-secondary)] mb-3">Verificações</h3><div class="grid grid-cols-2 gap-3"><div v-for="(item, i) in [{ label: 'Identidade Verificada', verified: true }, { label: 'Telefone Verificado', verified: true }, { label: 'E-mail Verificado', verified: true }, { label: 'Endereço Verificado', verified: pro.verified }]" :key="i" :class="['flex items-center gap-2 p-3 rounded-lg', item.verified ? 'bg-[color-mix(in srgb,var(--accent-green) 10%,transparent)]' : 'bg-[var(--bg-raised)]']"><Shield :class="['w-4 h-4', item.verified ? 'text-[var(--accent-green)]' : 'text-[var(--text-subtle)]']" /><span :class="['text-sm', item.verified ? 'text-[var(--accent-green)]' : 'text-[var(--text-subtle)]']">{{ item.label }}</span></div></div></div>
+                <div class="pt-2 border-t border-[var(--border-default)]">
+                  <h3 class="font-semibold text-[var(--text-secondary)] mb-3">Experiência Profissional</h3>
+                  <div class="flex items-center gap-3 p-4 bg-[var(--bg-raised)] border border-[var(--border-default)] rounded-xl mb-4">
+                    <Briefcase class="w-10 h-10 text-[var(--accent-gold)]" />
+                    <div>
+                      <p class="text-2xl font-bold text-[var(--text-primary)]">{{ pro.yearsExperience }} anos</p>
+                      <p class="text-sm text-[var(--text-muted)]">de experiência · {{ pro.completedJobs }} serviços concluídos</p>
+                    </div>
+                  </div>
+                  <div v-if="pro.experience.length > 0" class="space-y-4">
+                    <div v-for="exp in pro.experience" :key="exp.id" class="relative pl-6 pb-4 border-l-2 border-[var(--border-default)] last:pb-0 last:border-l-0">
+                      <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-[var(--accent-gold)] border-2 border-[var(--bg-page)]"></div>
+                      <div class="bg-[var(--bg-raised)] border border-[var(--border-default)] rounded-xl p-4">
+                        <div class="flex items-start justify-between mb-2">
+                          <div>
+                            <h4 class="font-medium text-[var(--text-primary)]">{{ exp.role }}</h4>
+                            <p class="text-sm text-[var(--accent-gold)]">{{ exp.company }}</p>
+                          </div>
+                          <span class="text-xs text-[var(--text-subtle)] whitespace-nowrap">{{ exp.startDate }}{{ exp.endDate ? ' - ' + exp.endDate : ' - Presente' }}</span>
+                        </div>
+                        <p class="text-sm text-[var(--text-muted)]">{{ exp.description }}</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
               <div v-if="activeTab === 'portfolio'">
@@ -349,47 +375,6 @@ function fecharMensagem() {
                 </template>
               </div>
             </div>
-          </div>
-        </div>
-
-        <div class="space-y-6">
-          <div class="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-xl shadow-card p-6 sticky top-24">
-            <div class="space-y-3 mb-6">
-              <button @click="handleRequestService" class="w-full py-3 bg-[var(--accent-gold)] text-[var(--text-on-accent)] font-semibold rounded-xl hover:shadow-lg transition-all">Solicitar Orçamento</button>
-            </div>
-            <div v-if="pro.instagram || pro.facebook" class="space-y-2 mb-4">
-              <a v-if="pro.instagram" :href="`https://instagram.com/${pro.instagram.replace('@', '')}`" target="_blank" rel="noopener noreferrer" class="w-full py-2.5 border rounded-xl transition-all flex items-center justify-center gap-2 text-sm font-medium"
-                style="color:#e1306c;border-color:rgba(225,48,108,0.25);background:rgba(225,48,108,0.06)">
-                <ExternalLink class="w-4 h-4" /> Instagram
-              </a>
-              <a v-if="pro.facebook" :href="pro.facebook.startsWith('http') ? pro.facebook : `https://facebook.com/${pro.facebook}`" target="_blank" rel="noopener noreferrer" class="w-full py-2.5 border rounded-xl transition-all flex items-center justify-center gap-2 text-sm font-medium"
-                style="color:#1877f2;border-color:rgba(24,119,242,0.25);background:rgba(24,119,242,0.06)">
-                <ExternalLink class="w-4 h-4" /> Facebook
-              </a>
-            </div>
-            <div v-if="isOwner && !pro.premium" class="mb-6 p-4 bg-[var(--bg-card)] border border-[var(--border-default)] rounded-xl">
-              <div class="flex items-center gap-2 mb-2">
-                <AlertCircle class="w-4 h-4 text-[var(--text-muted)]" />
-                <span class="text-sm font-medium text-[var(--text-muted)]">Perfil Informativo</span>
-              </div>
-              <p class="text-[var(--text-subtle)] text-xs leading-relaxed">
-                Este profissional possui o plano <strong>{{ planoNomePro }}</strong>.
-                <br />Para contratar, acesse o <button @click="emit('navigate', 'quadro-servicos')" class="text-[var(--accent-gold)] hover:underline font-medium">Quadro de Serviços</button> e publique sua solicitação.
-              </p>
-            </div>
-            <div v-if="!pro.premium && isLoggedIn" class="mb-4 p-3 bg-[var(--bg-card)] border border-[var(--border-default)] rounded-xl">
-              <div class="flex items-center gap-2 mb-2">
-                <Crown class="w-4 h-4 text-[var(--accent-gold)]" />
-                <span class="text-sm font-semibold text-[var(--text-primary)]">Destaque seu Perfil</span>
-              </div>
-              <p class="text-[var(--text-muted)] text-xs mb-3">Apareça em destaque nos resultados e receba mais clientes</p>
-              <button disabled class="w-full py-2 bg-gradient-to-r from-[var(--accent-gold)] to-[var(--accent-dark-gold)] text-[var(--text-on-accent)] font-semibold rounded-lg text-sm opacity-50 cursor-not-allowed">Assinar Ouro</button>
-            </div>
-            <div :class="['flex items-center gap-2 p-3 rounded-lg', pro.available ? 'bg-[color-mix(in srgb,var(--accent-green) 10%,transparent)]' : 'bg-[var(--bg-raised)]']">
-              <div :class="['w-2.5 h-2.5 rounded-full', pro.available ? 'bg-[var(--accent-green)]' : 'bg-[var(--text-subtle)]']"></div>
-              <span :class="['text-sm font-medium', pro.available ? 'text-[var(--accent-green)]' : 'text-[var(--text-subtle)]']">{{ pro.available ? 'Disponível para novos serviços' : 'Indisponível no momento' }}</span>
-            </div>
-            <div class="flex items-center gap-2 mt-4 text-[var(--text-muted)] text-sm"><Clock class="w-4 h-4" /> Tempo de resposta: {{ pro.responseTime }}</div>
           </div>
         </div>
       </div>

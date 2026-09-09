@@ -190,6 +190,11 @@ export interface Professional {
   completedJobs: number
   location: string
   uf: string
+  cidade?: string
+  cep?: string
+  endereco?: string
+  numero?: string
+  bairro?: string
   lat: number
   lng: number
   distance?: number

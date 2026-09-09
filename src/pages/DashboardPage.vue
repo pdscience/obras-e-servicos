@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   Briefcase, MessageCircle, Star,
@@ -74,6 +74,13 @@ function maskCpf(v: string) {
 }
 const editCidade = ref('')
 const editCidades = ref<string[]>([])
+const editCep = ref('')
+const editEndereco = ref('')
+const editNumero = ref('')
+const editBairro = ref('')
+const cepBuscando = ref(false)
+const cepErro = ref('')
+let preenchendoViaCep = false
 const editWhatsapp = ref('')
 const whatsappModal = ref(false)
 const whatsappLoading = ref(false)
@@ -85,8 +92,41 @@ const showDetalhesModal = ref(false)
 const servicoDetalhes = ref<ServiceRequest | null>(null)
 
 watch(editUf, async (newUf, oldUf) => {
-  if (newUf !== oldUf) editCidade.value = ''
+  if (newUf !== oldUf && !preenchendoViaCep) editCidade.value = ''
   editCidades.value = await getCitiesByUf(newUf)
+})
+
+function maskCep(v: string) {
+  const d = v.replace(/\D/g, '').slice(0, 8)
+  return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d
+}
+
+// Busca automática de endereço (ViaCEP) quando o CEP está completo
+watch(editCep, async (val) => {
+  const digits = val.replace(/\D/g, '')
+  cepErro.value = ''
+  if (digits.length !== 8) return
+  cepBuscando.value = true
+  try {
+    const resp = await fetch(`https://viacep.com.br/ws/${digits}/json/`)
+    if (!resp.ok) throw new Error('viacep')
+    const data = await resp.json() as { erro?: boolean | string; logradouro?: string; bairro?: string; localidade?: string; uf?: string }
+    if (data.erro) {
+      cepErro.value = 'CEP não encontrado. Verifique o número ou preencha o endereço manualmente.'
+      return
+    }
+    preenchendoViaCep = true
+    editEndereco.value = data.logradouro || ''
+    editBairro.value = data.bairro || ''
+    editUf.value = data.uf || ''
+    editCidade.value = data.localidade || ''
+    await nextTick()
+    preenchendoViaCep = false
+  } catch {
+    cepErro.value = 'Não foi possível consultar o CEP agora. Preencha o endereço manualmente.'
+  } finally {
+    cepBuscando.value = false
+  }
 })
 
 const editDescricao = ref('')
@@ -316,6 +356,10 @@ async function carregar() {
         proId.value = perfil.id
         editUf.value = perfil.uf ?? ''
         editCidade.value = perfil.cidade ?? ''
+        editCep.value = perfil.cep ?? ''
+        editEndereco.value = perfil.endereco ?? ''
+        editNumero.value = perfil.numero ?? ''
+        editBairro.value = perfil.bairro ?? ''
         editWhatsapp.value = perfil.whatsapp ?? ''
         editInstagram.value = perfil.instagram ?? ''
         editFacebook.value = perfil.facebook ?? ''
@@ -451,6 +495,10 @@ async function salvarPerfil() {
         uf: editUf.value,
         cidade: editCidade.value,
         whatsapp: editWhatsapp.value || undefined,
+        cep: editCep.value || undefined,
+        endereco: editEndereco.value || undefined,
+        numero: editNumero.value || undefined,
+        bairro: editBairro.value || undefined,
         instagram: editInstagram.value || undefined,
         facebook: editFacebook.value || undefined,
         portfolio: editPortfolio.value.map(p => ({
@@ -493,9 +541,11 @@ async function salvarPerfil() {
 
 const showPlansModal = ref(false)
 const showSuccess = ref(false)
+const successMsg = ref('')
 const showError = ref('')
 
-function notificarSucesso() {
+function notificarSucesso(msg = 'Dados atualizados com sucesso!') {
+  successMsg.value = msg
   showSuccess.value = true
   setTimeout(() => { showSuccess.value = false }, 4000)
 }
@@ -955,6 +1005,32 @@ onMounted(() => {
                 </div>
               </div>
 
+              <div>
+                <label class="block text-sm font-medium text-[var(--text-muted)] mb-2">CEP</label>
+                <div class="relative">
+                  <input :value="editCep" @input="editCep = maskCep(($event.target as HTMLInputElement).value)" type="text" inputmode="numeric" placeholder="00000-000" maxlength="9"
+                    class="w-full px-4 py-3 pr-12 bg-[var(--bg-raised)] border border-[var(--border-raised)] rounded-xl text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-gold)] placeholder-[var(--text-subtle)]" />
+                  <span v-if="cepBuscando" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-[var(--accent-gold)] border-t-transparent rounded-full animate-spin" aria-hidden="true"></span>
+                </div>
+                <p v-if="cepErro" class="text-xs text-[var(--accent-red)] mt-1.5">{{ cepErro }}</p>
+                <p v-else class="text-xs text-[var(--text-subtle)] mt-1.5">Digite o CEP para preencher o endereço automaticamente.</p>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="sm:col-span-2">
+                  <label class="block text-sm font-medium text-[var(--text-muted)] mb-2">Endereço (Rua/Avenida)</label>
+                  <input v-model="editEndereco" type="text" placeholder="Rua, avenida..." class="w-full px-4 py-3 bg-[var(--bg-raised)] border border-[var(--border-raised)] rounded-xl text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-gold)] placeholder-[var(--text-subtle)]" />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-[var(--text-muted)] mb-2">Número</label>
+                  <input v-model="editNumero" type="text" placeholder="123" class="w-full px-4 py-3 bg-[var(--bg-raised)] border border-[var(--border-raised)] rounded-xl text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-gold)] placeholder-[var(--text-subtle)]" />
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-[var(--text-muted)] mb-2">Bairro</label>
+                <input v-model="editBairro" type="text" placeholder="Bairro" class="w-full px-4 py-3 bg-[var(--bg-raised)] border border-[var(--border-raised)] rounded-xl text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-gold)] placeholder-[var(--text-subtle)]" />
+              </div>
+
               <div class="grid grid-cols-2 gap-4">
                 <div>
                   <label class="block text-sm font-medium text-[var(--text-muted)] mb-2">UF</label>
@@ -1092,7 +1168,7 @@ onMounted(() => {
                 <button @click="salvarPerfil" :disabled="saving" class="px-6 py-3 bg-[var(--accent-gold)] text-[var(--text-on-accent)] font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">{{ saving ? 'Salvando...' : 'Salvar Alterações' }}</button>
                 <div v-if="showSuccess"
                   class="flex items-center gap-2 px-4 py-3 bg-[color-mix(in srgb,var(--accent-green) 10%,transparent)] border border-[color-mix(in_srgb,var(--accent-gold)_27%,transparent)] rounded-xl text-[var(--accent-green)] text-sm font-medium animate-fade-in">
-                  <CheckCircle2 class="w-4 h-4" /> Dados atualizados com sucesso!
+                  <CheckCircle2 class="w-4 h-4" /> {{ successMsg }}
                 </div>
                 <div v-if="showError"
                   class="flex items-center gap-2 px-4 py-3 bg-[color-mix(in srgb,var(--accent-red) 10%,transparent)] border border-[var(--accent-red)] rounded-xl text-[var(--accent-red)] text-sm font-medium animate-fade-in">

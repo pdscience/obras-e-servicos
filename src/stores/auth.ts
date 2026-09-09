@@ -164,7 +164,18 @@ export const useAuthStore = defineStore('auth', () => {
     return false
   }
 
-  async function register(email: string, password: string, nome: string, tipo: string = 'cliente', telefone?: string, isInauguracao: boolean = false) {
+  async function register(
+    email: string,
+    password: string,
+    nome: string,
+    tipo: string = 'cliente',
+    telefone?: string,
+    // Compatibilidade com o fluxo promocional (?gratuito=true). O período
+    // gratuito de 60 dias da inauguração é concedido a todos os novos
+    // profissionais/lojistas via data_inicio_gratis; o plano Ouro efetivo
+    // durante o período é resolvido por obterPlanoEficaz() em src/config/planos.ts.
+    _gratuito = false
+  ) {
     error.value = null
     requireEmailVerification.value = false
     const { data, error: err } = await insforge.auth.signUp({
@@ -233,10 +244,11 @@ export const useAuthStore = defineStore('auth', () => {
       await criarUsuario({ id: user.value.id, email, nome, telefone, tipos: tiposFinais, tipo })
       if (tipo === 'profissional') {
         try {
-          const perfil = await criarPerfilProfissional({
+          await criarPerfilProfissional({
             usuario_id: user.value.id,
             nome,
             categoria: 'Geral',
+            // Inicia o período gratuito de 60 dias (plano Ouro efetivo durante o período)
             data_inicio_gratis: new Date().toISOString(),
           })
         } catch (e) {
