@@ -15,6 +15,8 @@ const showHeaderFooter = computed(() => {
   return !noLayoutRoutes.includes(route.name as string)
 })
 
+const showSidebar = computed(() => showHeaderFooter.value && route.name !== 'home' && auth.isLoggedIn)
+
 onMounted(() => {
   auth.ensureInitialized()
 })
@@ -25,7 +27,7 @@ onMounted(() => {
   <div class="palantir-platform">
     <template v-if="showHeaderFooter">
       <div class="app-shell">
-        <SidebarMenu />
+        <SidebarMenu v-if="showSidebar" />
         <div class="app-shell-main">
           <Header />
           <main class="app-shell-content">
