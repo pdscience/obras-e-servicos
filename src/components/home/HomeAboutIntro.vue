@@ -1,24 +1,23 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { FileCheck, Star, ThumbsUp } from '@lucide/vue'
 import { useScrollReveal } from '@/composables/useScrollReveal'
 
 const root = ref<HTMLElement | null>(null)
 useScrollReveal(root)
 
 const cards = [
-  { icon: FileCheck, title: 'Faça o seu pedido', text: 'Fale o que você precisa. É rápido e de graça!' },
-  { icon: Star, title: 'Receba orçamentos', text: 'Receba orçamentos de especialistas na área que busca e resolva o seu problema sem sair de casa.' },
-  { icon: ThumbsUp, title: 'Negocie direto com o profissional', text: 'Sem intermediários, rápido e descomplicado.' },
+  { img: '/assets/images/pedido.svg', title: 'Faça o seu pedido', text: 'Fale o que você precisa. É rápido e de graça!' },
+  { img: '/assets/images/profissionais.svg', title: 'Receba orçamentos', text: 'Receba orçamentos de especialistas na área que busca e resolva o seu problema sem sair de casa.' },
+  { img: '/assets/images/like.svg', title: 'Negocie direto com o profissional', text: 'Sem intermediários, rápido e descomplicado.' },
 ]
 </script>
 
 <template>
-  <section ref="root" class="home-about-intro">
+  <section ref="root" class="home-about-intro" id="oque-e-os">
     <div class="home-about-intro__inner">
-      <div class="home-section-head" data-reveal>
-        <h2 class="home-section-head__title font-display">O que é a OS – Obras &amp; Serviços?</h2>
-        <p class="home-section-head__sub">
+      <div class="home-about-intro__head" data-reveal>
+        <h2 class="home-about-intro__title-main">O que é a OS - Obras &amp; Serviços?</h2>
+        <p class="home-about-intro__sub">
           A Obras &amp; Serviços é a plataforma que une clientes, profissionais e lojistas em um só lugar.
           Transformamos a forma como você contrata e oferece serviços, garantindo praticidade, confiança e
           rapidez em cada atendimento, de norte a sul do Brasil.
@@ -29,15 +28,14 @@ const cards = [
         <article
           v-for="(card, i) in cards"
           :key="card.title"
-          class="home-about-intro__card"
-          :class="`reveal-delay-${i}`"
+          class="hiw-card"
           data-reveal
         >
-          <div class="home-about-intro__icon">
-            <component :is="card.icon" class="w-11 h-11" />
+          <div class="hiw-card__icon-wrapper">
+            <img :src="card.img" :alt="card.title" width="100" height="100" />
           </div>
-          <h3 class="home-about-intro__title font-display">{{ card.title }}</h3>
-          <p class="home-about-intro__text">{{ card.text }}</p>
+          <h3 class="hiw-card__title">{{ card.title }}</h3>
+          <p class="hiw-card__text">{{ card.text }}</p>
         </article>
       </div>
     </div>
@@ -46,88 +44,88 @@ const cards = [
 
 <style scoped>
 .home-about-intro {
-  background: var(--bg-card);
-  padding: clamp(3.5rem, 7vw, 6rem) 1.5rem;
+  padding: 60px 20px 80px;
+  background-color: #ffffff;
+  text-align: center;
+  margin-top: -20px;
+  position: relative;
+  z-index: 10;
+  font-family: 'Poppins', sans-serif;
 }
 
 .home-about-intro__inner {
-  max-width: 1200px;
+  max-width: 1100px;
   margin: 0 auto;
 }
 
-.home-section-head {
-  text-align: center;
-  max-width: 46rem;
-  margin: 0 auto clamp(2.25rem, 4.5vw, 3.5rem);
+.home-about-intro__head {
+  max-width: 900px;
+  margin: 0 auto 60px;
 }
 
-.home-section-head__title {
-  font-size: clamp(1.6rem, 3.4vw, 2.35rem);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--text-primary);
-  margin-bottom: 0.9rem;
+.home-about-intro__title-main {
+  font-family: 'Poppins', sans-serif;
+  font-size: 36px;
+  font-weight: 400;
+  color: #1a1a1a;
+  margin-bottom: 20px;
 }
 
-.home-section-head__sub {
-  color: var(--text-muted);
-  line-height: 1.7;
-  font-size: 1rem;
+.home-about-intro__sub {
+  font-size: 18px;
+  line-height: 1.6;
+  color: #555555;
+  font-weight: 400;
 }
 
 .home-about-intro__grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1.5rem;
+  grid-template-columns: 1fr;
+  gap: 40px;
+  max-width: 1100px;
+  margin: 0 auto;
 }
 
-.home-about-intro__card {
-  background: var(--bg-page);
-  border: 1px solid var(--border-default);
-  border-radius: 1.5rem;
-  padding: 2.1rem 1.7rem;
+@media (min-width: 768px) {
+  .home-about-intro__grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 30px;
+  }
+}
+
+.hiw-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
-  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
 }
 
-.home-about-intro__card:hover {
-  transform: translateY(-5px);
-  border-color: color-mix(in srgb, var(--accent-gold) 40%, transparent);
-  box-shadow: 0 18px 40px -22px rgba(212, 160, 23, 0.35);
-}
-
-.home-about-intro__icon {
-  width: 4.6rem;
-  height: 4.6rem;
-  margin: 0 auto 1.15rem;
-  border-radius: 1.35rem;
+.hiw-card__icon-wrapper {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin-bottom: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--accent-gold);
-  background: color-mix(in srgb, var(--accent-gold) 12%, transparent);
 }
 
-.home-about-intro__title {
-  font-size: 1.12rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 0.55rem;
+.hiw-card__icon-wrapper img {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
 }
 
-.home-about-intro__text {
-  font-size: 0.9rem;
-  line-height: 1.6;
-  color: var(--text-muted);
+.hiw-card__title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 12px;
 }
 
-@media (max-width: 860px) {
-  .home-about-intro__grid {
-    grid-template-columns: 1fr;
-  }
-
-  .home-about-intro__card {
-    padding: 1.7rem 1.4rem;
-  }
+.hiw-card__text {
+  font-size: 16px;
+  color: #555555;
+  line-height: 1.5;
 }
 </style>

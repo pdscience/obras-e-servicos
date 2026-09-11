@@ -1,10 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, type Component } from 'vue'
-import {
-  Zap, Droplets, Hammer, Paintbrush, Square, Armchair, Shield,
-  Grid3x3, AppWindow, Flower2, Wind, Building2, Wrench, ArrowRight,
-} from '@lucide/vue'
-import { categories, mainCategories } from '@/data/mockData'
+import { ref } from 'vue'
+import { ArrowRight } from '@lucide/vue'
 import { useScrollReveal } from '@/composables/useScrollReveal'
 
 const emit = defineEmits<{
@@ -15,60 +11,42 @@ const emit = defineEmits<{
 const root = ref<HTMLElement | null>(null)
 useScrollReveal(root)
 
-const iconMap: Record<string, Component> = {
-  Zap, Droplets, Hammer, Paintbrush, Square, Armchair, Shield,
-  Grid3x3, AppWindow, Flower2, Wind, Building2,
-}
+const gallery = [
+  { label: 'Pedreiro', img: '/assets/images/Pedreiro.png', slug: 'mc-1' },
+  { label: 'Eletricista', img: '/assets/images/Eletricista.svg', slug: 'mc-2' },
+  { label: 'Encanador', img: '/assets/images/Encanador.svg', slug: 'mc-3' },
+  { label: 'Pintor', img: '/assets/images/Pintor.svg', slug: 'mc-4' },
+  { label: 'Mestre de Obras', img: '/assets/images/Mestre de Obras.svg', slug: 'mc-1' },
+  { label: 'Ar-Condicionado', img: '/assets/images/Técnico de Ar-Condicionado.svg', slug: 'mc-5' },
+  { label: 'Manutenção', img: '/assets/images/Técnico de Manutenção.svg', slug: 'mc-5' },
+]
 
-const items = computed(() =>
-  categories.map((cat) => {
-    const main = mainCategories.find((mc) => mc.id === cat.mainCategoryId)
-    return {
-      label: cat.name,
-      icon: iconMap[cat.icon] || Wrench,
-      color: main?.color ?? '#d4a017',
-      slug: cat.mainCategoryId ?? 'mc-1',
-    }
-  })
-)
-
-interface GalleryItem {
-  label: string
-  icon: Component
-  color: string
-  slug: string
-}
-
-function cardStyle(item: GalleryItem) {
-  return {
-    background: `linear-gradient(140deg, ${item.color}26, ${item.color}10)`,
-    color: item.color,
-  }
+function selectItem(label: string, slug: string) {
+  emit('select', label, slug)
 }
 </script>
 
 <template>
-  <section ref="root" class="home-gallery" id="profissionais">
+  <section ref="root" class="home-gallery" id="categorias">
     <div class="home-gallery__head" data-reveal>
-      <p class="home-gallery__eyebrow">QUEM FAZ ACONTECER</p>
-      <h2 class="home-gallery__title font-display">Profissionais prontos para te atender</h2>
+      <span class="home-gallery__eyebrow">QUEM FAZ ACONTECER</span>
+      <h2 class="home-gallery__title">Profissionais prontos para te atender</h2>
       <p class="home-gallery__sub">Do projeto à decoração, conectamos você aos melhores profissionais da sua região.</p>
     </div>
 
-    <div class="home-marquee home-gallery__marquee" aria-hidden="true" data-reveal>
-      <div class="home-marquee__track" :style="{ '--marquee-duration': '38s' }">
-        <div v-for="(item, i) in items" :key="`a-${i}`" class="home-gallery__card">
-          <button class="home-gallery__tile" :style="cardStyle(item)" @click="emit('select', item.label, item.slug)">
-            <component :is="item.icon" class="w-9 h-9" />
-          </button>
-          <span class="home-gallery__label">{{ item.label }}</span>
+    <div class="home-gallery__track-wrapper" aria-hidden="true" data-reveal>
+      <div class="home-gallery__track">
+        <div v-for="(item, i) in gallery" :key="`a-${i}`" class="prof-card" @click="selectItem(item.label, item.slug)">
+          <div class="prof-card__img-wrap">
+            <img :src="item.img" :alt="item.label" class="prof-card__img" />
+          </div>
+          <div class="prof-card__label">{{ item.label }}</div>
         </div>
-
-        <div v-for="(item, i) in items" :key="`b-${i}`" class="home-gallery__card" aria-hidden="true">
-          <button class="home-gallery__tile" :style="cardStyle(item)" @click="emit('select', item.label, item.slug)">
-            <component :is="item.icon" class="w-9 h-9" />
-          </button>
-          <span class="home-gallery__label">{{ item.label }}</span>
+        <div v-for="(item, i) in gallery" :key="`b-${i}`" class="prof-card" aria-hidden="true">
+          <div class="prof-card__img-wrap">
+            <img :src="item.img" :alt="''" class="prof-card__img" />
+          </div>
+          <div class="prof-card__label">{{ item.label }}</div>
         </div>
       </div>
     </div>
@@ -83,114 +61,163 @@ function cardStyle(item: GalleryItem) {
 </template>
 
 <style scoped>
+@keyframes marquee-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
 .home-gallery {
-  background: var(--bg-page);
-  padding: clamp(3.5rem, 7vw, 5.5rem) 0;
+  background: #fff;
+  padding: 80px 0 72px;
   overflow: hidden;
+  font-family: 'Poppins', sans-serif;
 }
 
 .home-gallery__head {
   text-align: center;
-  max-width: 44rem;
-  margin: 0 auto clamp(2rem, 4vw, 2.6rem);
-  padding: 0 1.5rem;
+  margin-bottom: 56px;
+  padding: 0 20px;
 }
 
 .home-gallery__eyebrow {
+  display: inline-block;
   font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.18em;
+  font-weight: 400;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--accent-gold);
-  margin-bottom: 0.7rem;
+  color: #c9930a;
+  margin-bottom: 12px;
 }
 
 .home-gallery__title {
-  font-size: clamp(1.6rem, 3.4vw, 2.3rem);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--text-primary);
-  margin-bottom: 0.8rem;
+  font-size: clamp(1.75rem, 3vw, 2.4rem);
+  font-weight: 400;
+  color: #1a1a2e;
+  line-height: 1.2;
+  margin-bottom: 14px;
 }
 
 .home-gallery__sub {
-  color: var(--text-muted);
+  font-size: 1rem;
+  color: #6b7280;
+  max-width: 540px;
+  margin-inline: auto;
   line-height: 1.65;
 }
 
-.home-gallery__marquee {
+.home-gallery__track-wrapper {
+  position: relative;
   width: 100%;
+  overflow: hidden;
+  mask-image: linear-gradient(to right, transparent 0%, #000 8%, #000 92%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 8%, #000 92%, transparent 100%);
 }
 
-.home-gallery__card {
+.home-gallery__track {
+  display: flex;
+  width: max-content;
+  gap: 48px;
+  align-items: flex-end;
+  animation: marquee-scroll 20s linear infinite;
+  will-change: transform;
+  padding: 20px 0;
+}
+
+.home-gallery__track-wrapper:hover .home-gallery__track {
+  animation-play-state: paused;
+}
+
+.prof-card {
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.7rem;
-  padding: 0 0.9rem;
-}
-
-.home-gallery__tile {
-  width: 7.5rem;
-  height: 7.5rem;
-  border: none;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  user-select: none;
 }
 
-.home-gallery__tile:hover {
-  transform: translateY(-4px) scale(1.04);
-  box-shadow: 0 16px 30px -18px rgba(20, 14, 8, 0.35);
+.prof-card__img-wrap {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  position: relative;
 }
 
-.home-gallery__label {
-  font-size: 0.88rem;
+.prof-card__img-wrap::before {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 180px;
+  height: 24px;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+  z-index: -1;
+  pointer-events: none;
+}
+
+.prof-card__img {
+  width: auto;
+  height: 260px;
+  object-fit: contain;
+  object-position: bottom center;
+  display: block;
+  transition: transform 0.35s ease;
+}
+
+.prof-card:hover .prof-card__img {
+  transform: translateY(-8px) scale(1.04);
+}
+
+.prof-card__label {
+  display: block;
+  font-size: 1rem;
   font-weight: 600;
-  color: var(--text-secondary);
-  white-space: nowrap;
+  color: #1a1a2e;
+  text-align: center;
+  margin-top: 16px;
+  letter-spacing: 0.02em;
+}
+
+.prof-card:hover .prof-card__label {
+  color: #c9930a;
 }
 
 .home-gallery__cta {
   display: flex;
   justify-content: center;
-  margin-top: clamp(2.2rem, 4vw, 3rem);
-  padding: 0 1.5rem;
+  margin-top: 48px;
+  padding: 0 20px;
 }
 
 .home-gallery__btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.95rem 1.9rem;
-  border-radius: 999px;
-  background: var(--accent-gold);
+  gap: 8px;
+  padding: 14px 28px;
+  background-color: #d4a017;
   color: #fff;
+  border: 2px solid #d4a017;
   font-weight: 600;
-  font-size: 0.95rem;
-  border: none;
+  font-size: 1rem;
   cursor: pointer;
-  box-shadow: 0 12px 26px -14px rgba(212, 160, 23, 0.6);
-  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+  transition: all 0.3s ease;
 }
 
 .home-gallery__btn:hover {
-  background: var(--accent-dark-gold);
-  box-shadow: 0 16px 32px -14px rgba(212, 160, 23, 0.7);
-  transform: translateY(-1px);
-}
-
-.home-gallery__btn:active {
-  transform: scale(0.98);
+  background-color: #b88a0d;
+  border-color: #b88a0d;
 }
 
 @media (max-width: 768px) {
-  .home-gallery__tile {
-    width: 6rem;
-    height: 6rem;
-  }
+  .home-gallery { padding: 56px 0 48px; }
+  .home-gallery__head { margin-bottom: 40px; }
+  .home-gallery__track { gap: 32px; animation-duration: 16s; }
+  .prof-card__img { height: 180px; }
+}
+
+@media (max-width: 480px) {
+  .home-gallery__track { gap: 24px; animation-duration: 14s; }
+  .prof-card__img { height: 140px; }
 }
 </style>

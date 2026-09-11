@@ -71,10 +71,6 @@ const navLinks = computed(() => [
 
 <template>
   <header class="home-header">
-    <div class="home-header__banner">
-      ENCONTRE PROFISSIONAIS DE CONFIANÇA PERTO DE VOCÊ
-    </div>
-
     <div class="home-header__bar">
       <div class="home-header__container">
         <button
@@ -88,7 +84,7 @@ const navLinks = computed(() => [
         </button>
 
         <button class="home-header__logo" @click="navigate('home')" aria-label="OS – Obras e Serviços">
-          <img :src="logoSrc" alt="Logo OS – Obras & Serviços" class="home-header__logo-img" />
+          <img src="/assets/images/logo_os.png" alt="Logo OS - Obras & Serviços" class="home-header__logo-img" @error="(e) => { (e.target as HTMLImageElement).src = logoSrc }" />
         </button>
 
         <nav class="home-header__nav" aria-label="Menu principal">
@@ -120,25 +116,18 @@ const navLinks = computed(() => [
 
           <template v-else>
             <button class="home-header__pro" @click="registerProfessional">
-              <UserPlus class="w-4 h-4" />
               Seja um profissional
             </button>
             <button class="home-header__login home-header__login--pulse" @click="navigate('login')">
-              <LogIn class="w-4 h-4" />
               Entrar
             </button>
           </template>
-
-          <button
-            class="home-header__theme"
-            :title="theme === 'dark' ? 'Modo claro' : 'Modo escuro'"
-            @click="toggleTheme"
-          >
-            <Sun v-if="theme === 'dark'" class="w-[18px] h-[18px]" />
-            <Moon v-else class="w-[18px] h-[18px]" />
-          </button>
         </div>
       </div>
+    </div>
+
+    <div class="home-header__banner">
+      ENCONTRE PROFISSIONAIS DE CONFIANÇA PERTO DE VOCÊ
     </div>
 
     <div v-if="mobileMenuOpen" class="home-header__mobile">
@@ -206,31 +195,29 @@ const navLinks = computed(() => [
 .home-header {
   position: sticky;
   top: 0;
+  left: 0;
+  width: 100%;
   z-index: 100;
-  background: #ffffff;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06), 0 8px 24px -18px rgba(60, 40, 20, 0.18);
-}
-
-[data-theme='dark'] .home-header {
-  background: var(--bg-card);
+  background-color: #ffffff;
+  font-family: 'Poppins', sans-serif;
 }
 
 .home-header__banner {
-  background: linear-gradient(90deg, #d4a017, #e8b72a, #d4a017);
-  color: #2b2110;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
+  background-color: #d4a017;
+  color: #ffffff;
   text-align: center;
-  padding: 0.55rem 1rem;
-}
-
-[data-theme='dark'] .home-header__banner {
-  color: #1a1507;
+  padding: 4px 10px;
+  font-size: clamp(0.55rem, 2.8vw, 0.95rem);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .home-header__bar {
-  padding: 0 1.5rem;
+  padding: 0 20px;
 }
 
 .home-header__container {
@@ -238,8 +225,9 @@ const navLinks = computed(() => [
   margin: 0 auto;
   display: flex;
   align-items: center;
-  gap: 1rem;
-  height: 68px;
+  justify-content: space-between;
+  gap: 32px;
+  height: 72px;
 }
 
 .home-header__burger {
@@ -265,95 +253,105 @@ const navLinks = computed(() => [
 }
 
 .home-header__logo-img {
-  height: 40px;
+  height: 44px;
   width: auto;
 }
 
 .home-header__nav {
-  display: flex;
+  display: none;
   align-items: center;
-  gap: 0.35rem;
-  margin-left: 1rem;
+  gap: 32px;
+  flex: 1;
+  justify-content: center;
+}
+
+@media (min-width: 1024px) {
+  .home-header__nav {
+    display: flex;
+  }
 }
 
 .home-header__nav-link {
-  padding: 0.5rem 0.85rem;
+  padding: 0;
   border: none;
   background: transparent;
-  border-radius: 999px;
-  font-size: 0.9rem;
+  font-size: 0.9375rem;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: #555555;
   cursor: pointer;
-  transition: color 0.18s ease, background 0.18s ease;
+  transition: color 0.15s ease;
   white-space: nowrap;
 }
 
 .home-header__nav-link:hover {
-  color: var(--accent-dark-gold);
-  background: color-mix(in srgb, var(--accent-gold) 10%, transparent);
+  color: #d4a017;
 }
 
 .home-header__actions {
   margin-left: auto;
-  display: flex;
+  display: none;
   align-items: center;
-  gap: 0.6rem;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+@media (min-width: 1024px) {
+  .home-header__actions {
+    display: flex;
+  }
 }
 
 .home-header__pro {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.58rem 1.15rem;
-  border-radius: 999px;
-  border: 1.5px solid var(--border-raised);
+  padding: 9px 18px;
+  border-radius: 0;
+  border: 1px solid #e8e8e8;
   background: transparent;
-  color: var(--text-primary);
-  font-size: 0.86rem;
-  font-weight: 600;
+  color: #1a1a1a;
+  font-size: 0.875rem;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
-  transition: border-color 0.18s ease, color 0.18s ease;
+  transition: all 0.15s ease;
 }
 
 .home-header__pro:hover {
-  border-color: var(--accent-gold);
-  color: var(--accent-dark-gold);
+  border-color: #d4a017;
+  color: #d4a017;
 }
 
 .home-header__login {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.58rem 1.3rem;
-  border-radius: 999px;
+  padding: 10px 28px;
+  border-radius: 6px;
   border: none;
-  background: var(--accent-gold);
+  background: linear-gradient(135deg, #d4a017 0%, #e6a800 100%);
   color: #fff;
-  font-size: 0.86rem;
+  font-size: 0.9rem;
   font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.18s ease, transform 0.15s ease;
+  box-shadow: 0 4px 18px rgba(212, 160, 0, 0.45);
+  transition: all 0.22s ease;
 }
 
 .home-header__login:hover {
-  background: var(--accent-dark-gold);
-}
-
-.home-header__login:active {
-  transform: scale(0.97);
+  background: linear-gradient(135deg, #e6a800 0%, #d4a017 100%);
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 6px 28px rgba(212, 160, 0, 0.65);
 }
 
 @keyframes header-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(212, 160, 23, 0.55); }
-  70% { box-shadow: 0 0 0 9px rgba(212, 160, 23, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(212, 160, 23, 0); }
+  0%, 100% { box-shadow: 0 4px 18px rgba(212, 160, 0, 0.45); }
+  50% { box-shadow: 0 4px 30px rgba(212, 160, 0, 0.8); }
 }
 
 .home-header__login--pulse {
-  animation: header-pulse 2.4s ease-out infinite;
+  animation: header-pulse 2.4s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -363,21 +361,7 @@ const navLinks = computed(() => [
 }
 
 .home-header__theme {
-  width: 2.6rem;
-  height: 2.6rem;
-  border-radius: 0.8rem;
-  border: 1px solid var(--border-default);
-  background: transparent;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--accent-gold);
-  cursor: pointer;
-  transition: background 0.18s ease;
-}
-
-.home-header__theme:hover {
-  background: var(--bg-raised);
+  display: none;
 }
 
 .home-header__avatar {

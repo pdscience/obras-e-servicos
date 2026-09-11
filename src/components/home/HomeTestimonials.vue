@@ -99,36 +99,36 @@ const testimonials = [
 
 <style scoped>
 .home-testimonials {
-  background: var(--bg-card);
-  padding: clamp(3.5rem, 7vw, 5.5rem) 0;
+  background: #ffffff;
+  padding: 64px 0;
   overflow: hidden;
+  font-family: 'Poppins', sans-serif;
 }
 
 .home-testimonials__head {
   max-width: 44rem;
-  margin: 0 auto clamp(2rem, 4vw, 2.6rem);
-  padding: 0 1.5rem;
+  margin: 0 auto 40px;
+  padding: 0 20px;
   text-align: center;
 }
 
 .home-testimonials__title {
-  font-size: clamp(1.6rem, 3.4vw, 2.3rem);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--text-primary);
+  font-size: clamp(26px, 3vw, 36px);
+  font-weight: 400;
+  color: #1a1a1a;
 }
 
 .home-testimonial-card {
-  width: 24rem;
+  width: 350px;
   flex-shrink: 0;
-  background: var(--bg-page);
-  border: 1px solid var(--border-default);
-  border-radius: 1.4rem;
-  padding: 1.7rem 1.6rem;
-  margin: 0 0.8rem;
+  background-color: #f5f5f5;
+  border: 1px solid #e8e8e8;
+  border-radius: 12px;
+  padding: 24px;
+  margin: 0 12px;
   display: flex;
   flex-direction: column;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
 .home-testimonial-card:hover {
@@ -138,17 +138,18 @@ const testimonials = [
 
 .home-testimonial-card__stars {
   display: flex;
-  gap: 0.15rem;
-  color: #f5b61a;
-  margin-bottom: 0.85rem;
+  gap: 2px;
+  color: #ffb800;
+  margin-bottom: 16px;
 }
 
 .home-testimonial-card__text {
-  font-size: 0.92rem;
-  line-height: 1.68;
-  color: var(--text-secondary);
-  margin-bottom: 1.4rem;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: #555555;
+  margin-bottom: 24px;
   flex: 1;
+  font-style: italic;
 }
 
 .home-testimonial-card__author {

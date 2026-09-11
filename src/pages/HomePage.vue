@@ -92,11 +92,22 @@ function handleRegisterPlan(plano: PlanoProfissional) {
 
 <style scoped>
 .home-landing {
-  background: var(--bg-page);
-  color: var(--text-secondary);
+  background: #ffffff;
+  color: #555555;
+  font-family: 'Poppins', 'Inter', sans-serif;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .home-landing :deep(section[id]) {
-  scroll-margin-top: 96px;
+  scroll-margin-top: 110px;
+}
+
+.home-landing :deep(h1),
+.home-landing :deep(h2),
+.home-landing :deep(h3) {
+  font-family: 'Poppins', sans-serif;
+  color: #1a1a1a;
 }
 </style>

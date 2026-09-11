@@ -58,14 +58,17 @@ const cards = [
 .home-about-cards__bg {
   position: absolute;
   inset: 0;
-  background: url('https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
+  background:
+    url('/assets/images/background_sobre.jpg') center/cover no-repeat,
+    url('https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
+  background-position: 20% center;
   transform: scale(1.02);
 }
 
 .home-about-cards__overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(10, 12, 15, 0.86), rgba(10, 12, 15, 0.94));
+  background: rgba(0, 0, 0, 0.65);
 }
 
 .home-about-cards__inner {
@@ -90,25 +93,41 @@ const cards = [
 }
 
 .home-about-cards__card {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 1.5rem;
-  padding: 2rem 1.7rem;
-  backdrop-filter: blur(6px);
-  transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 24px;
+  padding: 40px 32px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
 }
 
 .home-about-cards__card:hover {
-  transform: translateY(-4px);
-  background: rgba(255, 255, 255, 0.09);
-  border-color: rgba(232, 183, 42, 0.45);
+  transform: translateY(-8px);
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+  border-color: #d4a017;
 }
 
 .home-about-cards__title {
-  font-size: 1.12rem;
-  font-weight: 600;
-  color: #f7f2e8;
-  margin-bottom: 0.7rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 20px;
+  position: relative;
+  padding-bottom: 16px;
+}
+
+.home-about-cards__title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 40px;
+  height: 3px;
+  background-color: #d4a017;
+  border-radius: 2px;
 }
 
 .home-about-cards__text {

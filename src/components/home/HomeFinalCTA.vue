@@ -27,12 +27,11 @@ const emit = defineEmits<{ register: [] }>()
 
 <style scoped>
 .home-final-cta {
-  background: linear-gradient(135deg, #232a33 0%, #181d23 100%);
-  color: #f5f0e6;
-  padding: clamp(3.5rem, 7vw, 5.5rem) 1.5rem;
+  background-color: #ffffff;
+  color: #1a1a1a;
+  padding: 64px 20px;
   text-align: center;
-  overflow: hidden;
-  position: relative;
+  font-family: 'Poppins', sans-serif;
 }
 
 .home-final-cta::before {
@@ -47,45 +46,45 @@ const emit = defineEmits<{ register: [] }>()
   position: relative;
   max-width: 46rem;
   margin: 0 auto;
+  background: #f9f9f9;
+  border: 1px solid #e8e8e8;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+  padding: 48px 32px;
 }
 
 .home-final-cta__title {
-  font-size: clamp(1.7rem, 3.8vw, 2.5rem);
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-size: clamp(22px, 2.5vw, 30px);
+  font-weight: 400;
   line-height: 1.2;
-  margin-bottom: 1rem;
+  margin-bottom: 8px;
+  color: #1a1a1a;
 }
 
 .home-final-cta__text {
-  color: rgba(245, 240, 230, 0.78);
+  color: #555555;
   line-height: 1.7;
   max-width: 34rem;
-  margin: 0 auto 2rem;
+  margin: 0 auto 24px;
 }
 
 .home-final-cta__btn {
   display: inline-flex;
   align-items: center;
   gap: 0.6rem;
-  padding: 1.05rem 2.2rem;
+  padding: 16px 32px;
   border: none;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #e8b72a, #d4a017);
-  color: #2b2110;
+  border-radius: 0;
+  background-color: #d4a017;
+  color: #fff;
   font-weight: 700;
   font-size: 1rem;
   cursor: pointer;
-  box-shadow: 0 18px 40px -16px rgba(212, 160, 23, 0.7);
-  transition: transform 0.18s ease, filter 0.18s ease;
+  transition: all 0.15s ease;
 }
 
 .home-final-cta__btn:hover {
-  transform: translateY(-2px);
-  filter: brightness(1.06);
-}
-
-.home-final-cta__btn:active {
-  transform: scale(0.98);
+  background-color: #b88a0d;
+  transform: translateY(-1px);
 }
 </style>

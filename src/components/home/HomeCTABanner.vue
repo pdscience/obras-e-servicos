@@ -14,7 +14,7 @@ const emit = defineEmits<{ findPro: []; register: [] }>()
   <section ref="root" class="home-cta-banner">
     <div class="home-cta-banner__inner">
       <div class="home-cta-banner__logo reveal-on-scroll" data-reveal>
-        <img :src="logoSrc" alt="Logo OS – Obras & Serviços" class="home-cta-banner__img" />
+        <img src="/assets/images/logo_os.png" alt="Logo Obras e Serviços" class="home-cta-banner__img" @error="(e) => { (e.target as HTMLImageElement).src = logoSrc }" />
       </div>
 
       <div class="home-cta-banner__content reveal-on-scroll" data-reveal>
@@ -39,8 +39,9 @@ const emit = defineEmits<{ findPro: []; register: [] }>()
 
 <style scoped>
 .home-cta-banner {
-  background: var(--bg-page);
-  padding: clamp(3.5rem, 7vw, 5.5rem) 1.5rem;
+  background: #fff;
+  padding: 60px 20px;
+  font-family: 'Poppins', sans-serif;
 }
 
 .home-cta-banner__inner {
@@ -67,16 +68,15 @@ const emit = defineEmits<{ findPro: []; register: [] }>()
 }
 
 .home-cta-banner__title {
-  font-size: clamp(1.7rem, 3.8vw, 2.6rem);
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 400;
   line-height: 1.2;
-  color: var(--text-primary);
-  margin-bottom: 1.6rem;
+  color: #1a1a2e;
+  margin-bottom: 32px;
 }
 
 .home-cta-banner__title span {
-  color: var(--accent-gold);
+  color: #c9930a;
 }
 
 .home-cta-banner__actions {
@@ -90,12 +90,12 @@ const emit = defineEmits<{ findPro: []; register: [] }>()
   align-items: center;
   justify-content: center;
   gap: 0.55rem;
-  padding: 0.95rem 1.8rem;
-  border-radius: 999px;
+  padding: 14px 28px;
+  border-radius: 0;
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 1rem;
   cursor: pointer;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+  transition: all 0.3s ease;
   white-space: nowrap;
 }
 
@@ -104,25 +104,25 @@ const emit = defineEmits<{ findPro: []; register: [] }>()
 }
 
 .home-cta-banner__btn--primary {
-  background: var(--accent-gold);
+  background-color: #c9930a;
   color: #fff;
-  border: none;
-  box-shadow: 0 12px 26px -14px rgba(212, 160, 23, 0.55);
+  border: 2px solid #c9930a;
 }
 
 .home-cta-banner__btn--primary:hover {
-  background: var(--accent-dark-gold);
+  background-color: #a87b08;
+  border-color: #a87b08;
 }
 
 .home-cta-banner__btn--outline {
   background: transparent;
-  color: var(--text-primary);
-  border: 1.5px solid var(--border-raised);
+  color: #1a1a2e;
+  border: 2px solid #cbd5e1;
 }
 
 .home-cta-banner__btn--outline:hover {
-  border-color: var(--accent-gold);
-  color: var(--accent-dark-gold);
+  border-color: #1a1a2e;
+  background-color: rgba(0,0,0,0.03);
 }
 
 @media (max-width: 820px) {
