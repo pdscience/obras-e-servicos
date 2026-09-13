@@ -10,7 +10,7 @@ import {
 import type { Professional, PerfilLojista, Produto } from '../types'
 import { criarServico, criarReview, listarLojistas, listarProdutos, mapLojistaToPerfil, mapProdutoToProduto, obterProfissionalPorId } from '../services/api'
 import { sugerirLojistas, sugerirProdutos } from '../utils/matching'
-import { PLANOS, CORES_PLANO } from '../config/planos'
+import { PLANOS, CORES_PLANO, podeAtuarProfissional } from '../config/planos'
 import { useAuthStore } from '../stores/auth'
 
 const route = useRoute()
@@ -75,6 +75,13 @@ const planoCoresPro = computed(() => {
 const isLoggedIn = computed(() => auth.isLoggedIn || props.isLoggedIn)
 const currentUserId = computed(() => props.userId || auth.user?.id || '')
 
+// Contato direto (WhatsApp) só com trial ativo ou plano pago — expirado sem plano: oculto (anti-bypass do upgrade)
+const podeContato = computed(() => {
+  const p = pro.value
+  if (!p) return false
+  return podeAtuarProfissional(p.premium, p.data_inicio_gratis)
+})
+
 const showRequestModal = ref(props.autoOpenRequest ?? false)
 const requestStep = ref(1)
 const requestTipo = ref('')
@@ -110,12 +117,38 @@ function whatsappUrl(num?: string) {
   return `https://wa.me/${comCodigo}`
 }
 
+function requireLogin() {
+  router.push({ name: 'login', query: { redirect: route.fullPath } })
+}
+
 function handleRequestService() {
   if (!isLoggedIn.value) {
-    if (pro.value) emit('requestLogin', pro.value)
+    requireLogin()
     return
   }
   showRequestModal.value = true
+}
+
+async function handleShare() {
+  if (!isLoggedIn.value) {
+    requireLogin()
+    return
+  }
+  const url = window.location.href
+  const title = pro.value ? `Profissional ${pro.value.name} | Obras & Serviços` : 'Obras & Serviços'
+  if (navigator.share) {
+    try { await navigator.share({ title, url }) } catch { /* compartilhamento cancelado */ }
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(url)
+    mensagem.value = 'Link copiado!'
+    mensagemTipo.value = 'sucesso'
+  } catch {
+    mensagem.value = 'Não foi possível compartilhar.'
+    mensagemTipo.value = 'erro'
+  }
+  setTimeout(() => { mensagem.value = ''; mensagemTipo.value = null }, 3000)
 }
 
 async function handleSubmitRequest() {
@@ -282,7 +315,7 @@ function fecharMensagem() {
           <div class="flex flex-row md:flex-col gap-2">
             <button @click="handleRequestService" class="px-5 py-2.5 bg-[var(--accent-gold)] text-[var(--text-on-accent)] font-semibold rounded-xl hover:shadow-lg transition-all text-sm">Solicitar Orçamento</button>
             <a
-              v-if="pro.whatsapp"
+              v-if="pro.whatsapp && isLoggedIn && podeContato"
               :href="whatsappUrl(pro.whatsapp)"
               target="_blank"
               rel="noopener noreferrer"
@@ -291,10 +324,18 @@ function fecharMensagem() {
             >
               <MessageCircle class="w-4 h-4" /> WhatsApp
             </a>
-            <button v-else class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--bg-raised)] text-[var(--text-subtle)] text-sm font-medium cursor-not-allowed" title="Este profissional ainda não cadastrou WhatsApp" disabled>
+            <button
+              v-else-if="pro.whatsapp && podeContato"
+              @click="requireLogin"
+              class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--accent-green)] text-white hover:opacity-90 transition-opacity text-sm font-medium"
+              title="Entre para falar com o profissional no WhatsApp"
+            >
               <MessageCircle class="w-4 h-4" /> WhatsApp
             </button>
-            <button class="inline-flex items-center gap-2 px-3 py-2 bg-[var(--bg-raised)] hover:bg-[var(--border-default)] rounded-lg transition-colors text-sm text-[var(--text-muted)]"><Share2 class="w-5 h-5" /> Compartilhar</button>
+            <button v-else-if="!pro.whatsapp" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--bg-raised)] text-[var(--text-subtle)] text-sm font-medium cursor-not-allowed" title="Este profissional ainda não cadastrou WhatsApp" disabled>
+              <MessageCircle class="w-4 h-4" /> WhatsApp
+            </button>
+            <button @click="handleShare" class="inline-flex items-center gap-2 px-3 py-2 bg-[var(--bg-raised)] hover:bg-[var(--border-default)] rounded-lg transition-colors text-sm text-[var(--text-muted)]"><Share2 class="w-5 h-5" /> Compartilhar</button>
           </div>
         </div>
       </div>

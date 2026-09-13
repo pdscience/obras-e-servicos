@@ -3,7 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import {
   ClipboardList, Clock, CheckCircle2,
   User,
-  Briefcase, DollarSign, Search, ArrowRight,
+  Briefcase, DollarSign, ArrowRight,
   MapPin, Calendar, MessageCircle, Star, X, Crown, AlertTriangle, ChevronDown
 } from '@lucide/vue'
 import { listarServicosDoCliente, obterPerfilProfissionalPorId, obterPerfilUsuario, atualizarPerfilUsuario, atualizarStatusServico, criarReview, listarProfissionais, mapPerfilToProfessional, criarPerfilUsuario, listarTodasProfissoes } from '../services/api'
@@ -11,6 +11,8 @@ import { getCitiesByUf } from '../data/cities'
 import { useAuthStore } from '../stores/auth'
 import { useRouter, useRoute } from 'vue-router'
 import SolicitarOrcamentoModal from '@/components/SolicitarOrcamentoModal.vue'
+import TornarProfissionalModal from '@/components/TornarProfissionalModal.vue'
+import { CORES_PLANO, PLANOS, obterPlanoEficaz, podeAtuarProfissional } from '../config/planos'
 import type { ServiceRequest, Professional, ProfissaoDB } from '../types'
 
 defineEmits<{ back: [] }>()
@@ -23,7 +25,13 @@ const loading = ref(true)
 const activeTab = ref('todos')
 const profissionaisAceitos = ref<Record<string, Professional>>({})
 
-const view = ref<'profissionais' | 'pedidos'>('profissionais')
+const view = ref<'profissionais' | 'pedidos'>(
+  route.query.view === 'pedidos' ? 'pedidos' : 'profissionais'
+)
+
+watch(() => route.query.view, (v) => {
+  view.value = v === 'pedidos' ? 'pedidos' : 'profissionais'
+})
 const profissionais = ref<Professional[]>([])
 const proLoading = ref(false)
 
@@ -76,6 +84,13 @@ function verPerfil(pro: Professional) {
   router.push({ name: 'profile', params: { id: pro.id } })
 }
 
+function getPlanoInfo(pro: Professional) {
+  const { plano, isGratis } = obterPlanoEficaz(pro.premium_plano, pro.premium, pro.data_inicio_gratis)
+  const cores = CORES_PLANO[plano]
+  const nome = PLANOS[plano].nome
+  return { plano, cores, label: isGratis ? `${nome} (Grátis)` : nome }
+}
+
 function whatsappUrl(num?: string) {
   if (!num) return '#'
   const digits = num.replace(/\D/g, '')
@@ -84,8 +99,8 @@ function whatsappUrl(num?: string) {
 }
 
 function planoElegivelWhatsapp(pro: Professional) {
-  const plano = (pro.premium_plano ?? '').toLowerCase()
-  return ['bronze', 'prata', 'ouro'].includes(plano) || pro.premium === true
+  // Trial ativo OU plano pago: exibe WhatsApp; expirado sem plano: oculta (anti-bypass do upgrade)
+  return podeAtuarProfissional(pro.premium, pro.data_inicio_gratis)
 }
 
 const showEditModal = ref(false)
@@ -208,10 +223,22 @@ onMounted(() => {
   carregar()
   carregarProfissionais()
   if (route.query.configurar) abrirEdicao()
+  if (route.query.orcamento) abrirOrcamentoViaRota()
 })
 
 watch(() => route.query.configurar, (v) => {
   if (v) abrirEdicao()
+})
+
+function abrirOrcamentoViaRota() {
+  showOrcamentoModal.value = true
+  const q = { ...route.query }
+  delete q.orcamento
+  router.replace({ query: q })
+}
+
+watch(() => route.query.orcamento, (v) => {
+  if (v) abrirOrcamentoViaRota()
 })
 
 async function abrirEdicao() {
@@ -243,7 +270,7 @@ const stats = computed(() => {
   const andamento = servicos.value.filter(s => s.status === 'em_andamento').length
   const concluidos = servicos.value.filter(s => s.status === 'concluido').length
   return [
-    { label: 'Total de Pedidos', value: total, icon: ClipboardList, color: '#7ee8fa' },
+    { label: 'Total de Pedidos', value: total, icon: ClipboardList, color: '#0f766e' },
     { label: 'Aguardando Resposta', value: abertos, icon: Clock, color: '#f0b429' },
     { label: 'Em Andamento', value: andamento, icon: Briefcase, color: '#f0a500' },
     { label: 'Concluídos', value: concluidos, icon: CheckCircle2, color: '#3fb950' },
@@ -346,6 +373,13 @@ function fecharReview() {
   reviewComment.value = ''
   reviewServicoId.value = null
 }
+
+const showTornarProfiModal = ref(false)
+
+function aoCriarPerfilProfissional() {
+  showTornarProfiModal.value = false
+  router.push({ name: 'dashboard' })
+}
 </script>
 
 <template>
@@ -356,26 +390,13 @@ function fecharReview() {
           <h1 class="text-2xl font-bold text-[var(--text-primary)]">Área do Cliente</h1>
           <p class="text-[var(--text-muted)]">{{ view === 'profissionais' ? 'Encontre profissionais disponíveis perto de você' : 'Acompanhe seus pedidos de orçamento' }}</p>
         </div>
-        <div class="flex items-center gap-2 bg-[var(--bg-card)] border border-[var(--border-default)] rounded-xl p-1 w-fit">
-          <button
-            @click="view = 'profissionais'"
-            :class="[
-              'px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2',
-              view === 'profissionais' ? 'bg-[var(--accent-gold)] text-[var(--text-on-accent)]' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
-            ]"
-          >
-            <Search class="w-4 h-4" /> Profissionais
-          </button>
-          <button
-            @click="view = 'pedidos'"
-            :class="[
-              'px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2',
-              view === 'pedidos' ? 'bg-[var(--accent-gold)] text-[var(--text-on-accent)]' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
-            ]"
-          >
-            <ClipboardList class="w-4 h-4" /> Meus Pedidos
-          </button>
-        </div>
+        <button
+          v-if="!auth.temPerfilProfissional"
+          @click="showTornarProfiModal = true"
+          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[var(--accent-gold)]/40 text-[var(--accent-gold)] text-sm font-semibold hover:bg-[var(--accent-gold)] hover:text-[var(--text-on-accent)] transition-all whitespace-nowrap"
+        >
+          <Briefcase class="w-4 h-4" /> Quero ser profissional
+        </button>
       </div>
 
 <!-- Profissionais disponíveis (cards) -->
@@ -433,16 +454,16 @@ function fecharReview() {
             :key="pro.id"
             class="h-full relative bg-gradient-to-b from-[var(--bg-raised)] to-[var(--bg-card)] border border-[var(--border-raised)] rounded-2xl overflow-hidden shadow-lg hover:shadow-[color-mix(in_srgb,var(--text-muted)_7%,transparent)] transition-all duration-300 hover:-translate-y-1.5 cursor-pointer group flex flex-col"
           >
-            <!-- Cabeçalho do card -->
-            <div class="bg-gradient-to-r from-[var(--accent-dark-gold)] to-[var(--accent-gold)] px-4 py-2 flex items-center justify-between shrink-0">
+            <!-- Cabeçalho do card: plano + categoria -->
+            <div
+              class="px-4 py-2 flex items-center justify-between shrink-0"
+              :style="{ background: `linear-gradient(to right, ${getPlanoInfo(pro).cores.from}, ${getPlanoInfo(pro).cores.to})` }"
+            >
               <div class="flex items-center gap-2 min-w-0">
-                <Star class="w-4 h-4 text-[var(--text-on-accent)] fill-[var(--text-on-accent)] shrink-0" />
-                <span class="text-[var(--text-on-accent)] text-xs font-bold uppercase tracking-wider truncate">{{ pro.category }}</span>
+                <Crown class="w-4 h-4 text-[var(--text-on-accent)] shrink-0" />
+                <span class="text-[var(--text-on-accent)] text-xs font-bold uppercase tracking-wider truncate">{{ getPlanoInfo(pro).label }}</span>
               </div>
-              <span v-if="pro.premium" class="flex items-center gap-1 text-[var(--text-on-accent)] text-xs font-semibold whitespace-nowrap">
-                <Crown class="w-3.5 h-3.5" /> Premium
-              </span>
-              <span v-else class="text-[var(--text-on-accent)] text-xs font-medium opacity-70 whitespace-nowrap">Profissional</span>
+              <span class="text-[var(--text-on-accent)] text-xs font-medium opacity-80 whitespace-nowrap truncate ml-2">{{ pro.category }}</span>
             </div>
 
             <div class="p-5 flex flex-col flex-1">
@@ -529,12 +550,6 @@ function fecharReview() {
                 : 'bg-[var(--bg-raised)] border border-[var(--border-default)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
             ]"
           >{{ tab.label }}</button>
-          <button
-            @click="showOrcamentoModal = true"
-            class="ml-auto whitespace-nowrap px-4 py-2 rounded-lg text-sm font-medium transition-all bg-[var(--accent-gold)] text-[var(--text-on-accent)] hover:shadow-lg"
-          >
-            Solicitar Orçamento
-          </button>
         </div>
 
         <!-- Empty state -->
@@ -732,6 +747,12 @@ function fecharReview() {
     @close="showOrcamentoModal = false"
     @created="showOrcamentoModal = false; carregar()"
     @requestLogin="showOrcamentoModal = false"
+  />
+
+  <TornarProfissionalModal
+    v-if="showTornarProfiModal"
+    @close="showTornarProfiModal = false"
+    @created="aoCriarPerfilProfissional"
   />
 
   <!-- Review Modal -->

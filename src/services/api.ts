@@ -413,7 +413,9 @@ export async function criarUsuario(usuario: {
         id: usuario.id,
         email: usuario.email,
         nome: usuario.nome,
-        telefone: usuario.telefone ?? null,
+        // Não envia telefone quando ausente: upsert sobrescreveria com null
+        // e apagaria o telefone já cadastrado (ex.: ao adicionar um novo papel).
+        ...(usuario.telefone !== undefined ? { telefone: usuario.telefone } : {}),
         tipo: tipoFinal,
         tipos: tiposPg,
         status: 'ativo',
@@ -558,6 +560,8 @@ export async function criarPerfilProfissional(perfil: {
   categoria: string
   subcategoria?: string
   especialidades?: string[]
+  descricao?: string
+  anos_experiencia?: number
   uf?: string
   cidade?: string
   premium_plano?: PlanoProfissional
@@ -581,6 +585,9 @@ export async function criarPerfilProfissional(perfil: {
       categoria: perfil.categoria,
       subcategoria: perfil.subcategoria ?? null,
       especialidades: perfil.especialidades ?? [],
+      // Só envia quando informado: upsert sobrescreveria o valor existente com null.
+      ...(perfil.descricao !== undefined ? { descricao: perfil.descricao } : {}),
+      ...(perfil.anos_experiencia !== undefined ? { anos_experiencia: perfil.anos_experiencia } : {}),
       uf: perfil.uf ?? null,
       cidade: perfil.cidade ?? null,
       premium: false,
@@ -734,7 +741,19 @@ export async function listarProfissionais() {
     .order('premium', { ascending: false })
     .order('avaliacao_media', { ascending: false })
   if (error) throw error
-  return (data ?? []).map(mapPerfilProfissional)
+  return deduplicarProfissionaisPorUsuario((data ?? []).map(mapPerfilProfissional))
+}
+
+// Remove linhas duplicadas do mesmo usuário (ex.: duplo cadastro),
+// mantendo a primeira ocorrência (ordenação: premium primeiro).
+export function deduplicarProfissionaisPorUsuario<T extends { id: string; usuario_id?: string }>(lista: T[]): T[] {
+  const vistos = new Set<string>()
+  return lista.filter(item => {
+    const chave = item.usuario_id || item.id
+    if (vistos.has(chave)) return false
+    vistos.add(chave)
+    return true
+  })
 }
 
 export function mapPerfilToProfessional(p: PerfilProfissionalDB): Professional {
@@ -1262,7 +1281,7 @@ export async function listarProfissionaisPorCategoria(categoriaNome: string) {
     .order('premium', { ascending: false })
     .order('avaliacao_media', { ascending: false })
   if (error) throw error
-  return (data ?? []).map(mapPerfilToProfessional)
+  return deduplicarProfissionaisPorUsuario((data ?? []).map(mapPerfilToProfessional))
 }
 
 const SEED_CATEGORIAS = [

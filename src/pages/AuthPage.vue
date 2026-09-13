@@ -219,7 +219,7 @@ async function handleSubmit(e: Event) {
           <template v-if="authMode === 'login'">
             <button @click="router.push({ name: 'login' })" class="flex items-center gap-2 text-[var(--text-muted)] hover:text-[var(--accent-gold)] mb-8"><ChevronLeft class="w-5 h-5" /> Voltar</button>
             <div class="flex justify-center mb-8">
-              <img src="/src/assets/logo.png" alt="Obras & Serviços" class="h-48 w-auto object-contain" />
+              <img src="/assets/images/logo_os.png" alt="Obras & Serviços" class="h-48 w-auto object-contain" />
             </div>
             <h1 class="text-2xl font-bold text-[var(--text-primary)] mb-2">Bem-vindo de volta!</h1>
             <p class="text-[var(--text-muted)] mb-4">Entre na sua conta para continuar</p>
@@ -341,7 +341,7 @@ async function handleSubmit(e: Event) {
         <div class="relative z-10 flex items-center justify-center h-full p-12">
           <div class="text-center max-w-lg">
             <div class="flex justify-center mb-6">
-              <img src="/src/assets/logo.png" alt="Obras & Serviços" class="h-48 w-auto object-contain" />
+              <img src="/assets/images/logo_os.png" alt="Obras & Serviços" class="h-48 w-auto object-contain" />
             </div>
             <h2 class="text-3xl font-bold text-[var(--text-primary)] mb-4">Conecte-se aos Melhores Profissionais</h2>
             <p class="text-[var(--text-muted)]">Milhares de profissionais qualificados prontos para transformar seu projeto em realidade.</p>

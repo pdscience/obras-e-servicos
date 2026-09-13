@@ -1,16 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Menu, X, LogIn, Sun, Moon, LogOut, LayoutDashboard, Settings, UserPlus } from '@lucide/vue'
+import { Menu, X, LogOut, LayoutDashboard, Settings } from '@lucide/vue'
 import { useAuthStore } from '../stores/auth'
-import { useTheme } from '../composables/useTheme'
 import EditarPerfilModal from './EditarPerfilModal.vue'
 import logoSrc from '../assets/logo.png'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
-const { theme, toggle: toggleTheme } = useTheme()
 const mobileMenuOpen = ref(false)
 const showEditProfileModal = ref(false)
 
@@ -61,12 +59,18 @@ async function goToSection(id: string) {
 }
 
 const navLinks = computed(() => [
-  { id: 'inicio', label: 'Início', action: () => navigate('home') },
+  { id: 'inicio', label: 'Início', action: () => goToSection('hero') },
   { id: 'como-funciona', label: 'Como funciona?', action: () => goToSection('como-funciona') },
-  { id: 'servicos', label: 'Serviços', action: () => navigate('categories') },
-  { id: 'planos', label: 'Planos', action: () => navigate('planos') },
-  { id: 'quem-somos', label: 'Quem somos', action: () => goToSection('sobre') },
+  { id: 'servicos', label: 'Serviços', action: () => goToSection('categorias') },
+  { id: 'planos', label: 'Planos', action: () => goToSection('planos') },
+  { id: 'quem-somos', label: 'Sobre a OS', action: () => goToSection('sobre') },
 ])
+
+const bannerText = computed(() =>
+  auth.isLoggedIn && auth.currentMode === 'profissional'
+    ? 'CENTRAL DE GESTÃO DE ORÇAMENTOS E SERVIÇOS'
+    : 'ENCONTRE PROFISSIONAIS DE CONFIANÇA PERTO DE VOCÊ'
+)
 </script>
 
 <template>
@@ -83,15 +87,18 @@ const navLinks = computed(() => [
           <Menu v-else class="w-6 h-6" />
         </button>
 
-        <button class="home-header__logo" @click="navigate('home')" aria-label="OS – Obras e Serviços">
+        <button v-if="!auth.isLoggedIn" class="home-header__logo" @click="navigate('home')" aria-label="OS – Obras e Serviços">
           <img src="/assets/images/logo_os.png" alt="Logo OS - Obras & Serviços" class="home-header__logo-img" @error="(e) => { (e.target as HTMLImageElement).src = logoSrc }" />
         </button>
 
-        <nav class="home-header__nav" aria-label="Menu principal">
+        <div v-else-if="auth.currentMode === 'profissional'" class="home-header__evp">
+          Escritório Virtual do Profissional <span class="home-header__evp-accent">– EVP</span>
+        </div>
+
+        <nav v-if="!auth.isLoggedIn" class="home-header__nav" aria-label="Menu principal">
           <button
             v-for="link in navLinks"
             :key="link.id"
-            :id="link.id"
             class="home-header__nav-link"
             @click="link.action()"
           >
@@ -127,7 +134,7 @@ const navLinks = computed(() => [
     </div>
 
     <div class="home-header__banner">
-      ENCONTRE PROFISSIONAIS DE CONFIANÇA PERTO DE VOCÊ
+      {{ bannerText }}
     </div>
 
     <div v-if="mobileMenuOpen" class="home-header__mobile">
@@ -255,6 +262,21 @@ const navLinks = computed(() => [
 .home-header__logo-img {
   height: 44px;
   width: auto;
+}
+
+.home-header__evp {
+  display: flex;
+  align-items: center;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.home-header__evp-accent {
+  color: #d4a017;
+  margin-left: 0.35rem;
 }
 
 .home-header__nav {

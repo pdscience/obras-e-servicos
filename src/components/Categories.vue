@@ -2,14 +2,14 @@
 import {
   Hammer, Shovel, Paintbrush, House, Zap, Wind, Cpu, Frame,
   Sparkles, Trees, Truck, Leaf, Shield, Building2,
-  ArrowRight, Wrench
+  Wrench
 } from '@lucide/vue'
 import { computed, reactive, ref, onMounted, watch } from 'vue'
 import { ChevronDown } from '@lucide/vue'
 import { mainCategories, professionals } from '../data/mockData'
 import { contarProfissionaisPorCategoria } from '../services/api'
 import type { Component } from 'vue'
-import type { MainCategory, Professional } from '../types'
+import type { Professional } from '../types'
 
 const props = withDefaults(defineProps<{
   compact?: boolean
@@ -24,10 +24,6 @@ const props = withDefaults(defineProps<{
   filterSearchTerm: '',
   maxItems: 0
 })
-
-const emit = defineEmits<{
-  mainCategorySelect: [mainCategory: MainCategory]
-}>()
 
 const realCounts = ref<Record<string, number>>({})
 
@@ -107,10 +103,6 @@ function toggleExpand(mcId: string) {
 function isExpanded(mcId: string) {
   return expandedCategories[mcId] || false
 }
-
-function selectCategory(mc: MainCategory) {
-  emit('mainCategorySelect', mc)
-}
 </script>
 
 <template>
@@ -130,8 +122,7 @@ function selectCategory(mc: MainCategory) {
         <article
           v-for="mc in enrichedCategories"
           :key="mc.id"
-          @click="selectCategory(mc)"
-          class="group bg-[var(--bg-card)] border border-[var(--border-default)] rounded-2xl shadow-card hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col relative overflow-hidden"
+          class="group bg-[var(--bg-card)] border border-[var(--border-default)] rounded-2xl shadow-card transition-all duration-300 flex flex-col relative overflow-hidden"
           :class="compact
             ? 'p-5 hover:shadow-xl'
             : `p-6 ${mc.hasProfessionals ? 'hover:border-[color-mix(in_srgb,var(--cat-color)_20%,transparent)] hover:shadow-card-hover' : 'opacity-90 hover:opacity-100'}`"
@@ -149,10 +140,7 @@ function selectCategory(mc: MainCategory) {
             :style="{ background: mc.color }"
           ></div>
 
-          <div
-            class="relative flex items-center justify-between"
-            :class="compact ? 'mb-4' : 'items-start justify-between mb-4'"
-          >
+          <div class="relative flex items-center gap-3 mb-4">
             <div
               :class="compact
                 ? 'w-12 h-12 rounded-xl group-hover:scale-110 group-hover:rotate-3'
@@ -166,27 +154,27 @@ function selectCategory(mc: MainCategory) {
                 :is="getIcon(mc.icon)"
                 :class="compact ? 'w-6 h-6' : 'w-6 h-6'"
                 class="transition-colors"
-                :style="{ color: mc.color }"
+                style="color: #000"
               />
             </div>
 
+            <h3
+              :class="compact
+                ? 'flex-1 text-base font-bold text-[var(--text-primary)] group-hover:text-[var(--accent-gold)] transition-colors line-clamp-2 leading-tight'
+                : 'flex-1 text-base font-bold text-[var(--text-primary)] group-hover:text-[var(--accent-gold)] transition-colors line-clamp-2'"
+            >
+              {{ mc.name }}
+            </h3>
+
             <div
               v-if="compact"
-              class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md"
+              class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md shrink-0"
               :style="{ background: mc.color + '18', color: mc.color }"
             >
               <span>{{ mc.professions.length }}</span>
               <span class="opacity-70">profs</span>
             </div>
           </div>
-
-          <h3
-            :class="compact
-              ? 'text-base font-bold text-[var(--text-primary)] mb-2 group-hover:text-[var(--accent-gold)] transition-colors line-clamp-2 leading-tight'
-              : 'text-base font-bold text-[var(--text-primary)] mb-2 group-hover:text-[var(--accent-gold)] transition-colors line-clamp-2'"
-          >
-            {{ mc.name }}
-          </h3>
 
           <p
             v-if="!compact"
@@ -282,13 +270,6 @@ function selectCategory(mc: MainCategory) {
               <span class="w-1.5 h-1.5 rounded-full bg-[var(--text-subtle)]"></span>
               Em breve
             </span>
-
-            <span
-              class="inline-flex items-center justify-center w-7 h-7 rounded-lg group-hover:scale-110 transition-all"
-              :style="{ background: mc.color + '20', color: mc.color }"
-            >
-              <ArrowRight class="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-            </span>
           </div>
 
           <div
@@ -318,14 +299,6 @@ function selectCategory(mc: MainCategory) {
                 Em breve
               </span>
             </div>
-
-            <span
-              class="inline-flex items-center gap-1 text-[11px] font-semibold transition-colors"
-              :style="{ color: mc.color }"
-            >
-              Ver
-              <ArrowRight class="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-            </span>
           </div>
         </article>
       </div>

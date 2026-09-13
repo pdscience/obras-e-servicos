@@ -26,7 +26,7 @@ const cards = [
 
       <div class="home-about-intro__grid">
         <article
-          v-for="(card, i) in cards"
+          v-for="card in cards"
           :key="card.title"
           class="hiw-card"
           data-reveal

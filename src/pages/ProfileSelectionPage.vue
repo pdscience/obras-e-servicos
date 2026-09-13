@@ -28,7 +28,7 @@ function goToType(type: 'client' | 'professional' | 'lojista') {
       </button>
 
       <div class="flex justify-center mb-8">
-        <img src="/src/assets/logo.png" alt="Obras & Serviços" class="h-48 w-auto object-contain" />
+        <img src="/assets/images/logo_os.png" alt="Obras & Serviços" class="h-48 w-auto object-contain" />
       </div>
 
       <h1 class="text-2xl font-bold text-[var(--text-primary)] mb-2 text-center">{{ isRegistro ? 'Criar conta' : 'Acessar Plataforma' }}</h1>

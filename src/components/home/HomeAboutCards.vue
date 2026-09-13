@@ -83,7 +83,10 @@ const cards = [
 }
 
 .home-section-head--dark :deep(.home-section-head__title) {
-  color: #ffffff;
+  color: #ffffff !important;
+  font-size: clamp(2.5rem, 5vw, 3.75rem);
+  font-weight: 800;
+  line-height: 1.1;
 }
 
 .home-about-cards__grid {
@@ -113,7 +116,7 @@ const cards = [
 .home-about-cards__title {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #ffffff;
+  color: #ffffff !important;
   margin-bottom: 20px;
   position: relative;
   padding-bottom: 16px;

@@ -42,6 +42,6 @@ export const audiences: Audience[] = [
     description: 'Divulgue seus produtos e estoque para quem está reformando na sua região.',
     bullets: ['Vitrine digital em tempo real', 'Cliente certo te encontra antes', 'Plano Premium prioritário', 'Contato via WhatsApp'],
     cta: 'Quero divulgar minha loja',
-    color: '#7ee8fa',
+    color: '#0f766e',
   },
 ]

@@ -5,7 +5,6 @@ import Categories from '@/components/Categories.vue'
 import CategoryFilters from '@/components/CategoryFilters.vue'
 import { mainCategories } from '@/data/mockData'
 import { listarTodasProfissoes } from '@/services/api'
-import type { MainCategory } from '@/types'
 
 const router = useRouter()
 
@@ -21,10 +20,6 @@ onMounted(async () => {
     profissoes.value = [...new Set(data.map(p => p.nome))].sort()
   } catch { /* ignore */ }
 })
-
-function handleMainCategorySelect(mainCategory: MainCategory) {
-  router.push({ name: 'category-detail', params: { slug: mainCategory.id } })
-}
 
 function handleCategorySelect(name: string) {
   if (name) {
@@ -71,7 +66,6 @@ function clearFilters() {
         :filter-uf="filterUf"
         :filter-city="filterCity"
         :filter-search-term="filterSearchTerm"
-        @mainCategorySelect="handleMainCategorySelect"
       />
     </div>
   </section>

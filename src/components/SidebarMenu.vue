@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { LogOut, LayoutDashboard, Settings } from '@lucide/vue'
+import { LogOut, LayoutDashboard, Settings, Search, ClipboardList, ClipboardCheck } from '@lucide/vue'
 import { useAuthStore } from '../stores/auth'
 import logoSrc from '../assets/logo.png'
 
@@ -9,7 +9,17 @@ const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
 
-function navigate(routeName: string) {
+async function navigate(routeName: string) {
+  if (routeName === 'planos') {
+    if (route.name === 'home') {
+      document.getElementById('planos')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      return
+    }
+    await router.push({ name: 'home' })
+    await nextTick()
+    document.getElementById('planos')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    return
+  }
   router.push({ name: routeName })
 }
 
@@ -26,6 +36,20 @@ const dashboardRoute = computed(() =>
   auth.currentMode === 'cliente' ? 'cliente-dashboard' : auth.currentMode === 'lojista' ? 'lojista-dashboard' : 'dashboard'
 )
 
+const isCliente = computed(() => auth.isLoggedIn && auth.currentMode === 'cliente')
+
+const clienteView = computed(() =>
+  route.name === 'cliente-dashboard' ? ((route.query.view as string) || 'profissionais') : ''
+)
+
+function goClienteView(view: 'profissionais' | 'pedidos') {
+  router.push({ name: 'cliente-dashboard', query: { ...route.query, view } })
+}
+
+function goSolicitarOrcamento() {
+  router.push({ name: 'cliente-dashboard', query: { ...route.query, view: 'pedidos', orcamento: '1' } })
+}
+
 const navItems = computed(() => {
   if (auth.isLoggedIn) return []
   const items = [
@@ -34,7 +58,6 @@ const navItems = computed(() => {
     { id: 'stores', label: 'Lojas' },
     { id: 'planos', label: 'Planos' },
     { id: 'faq', label: 'Perguntas Frequentes' },
-    { id: 'how-it-works', label: 'Como Funciona' },
   ]
   if (auth.currentMode !== 'cliente') {
     items.splice(2, 0, { id: 'quadro-servicos', label: 'Quadro de Serviços' })
@@ -47,7 +70,7 @@ const navItems = computed(() => {
     <!-- Logo -->
     <div class="px-2 mb-8">
       <button @click="navigate('home')" class="flex items-center gap-2" style="cursor:pointer">
-        <img :src="logoSrc" alt="Obras & Serviços" class="logo-text h-38 w-auto" />
+        <img src="/assets/images/logo_os.png" alt="Obras & Serviços" class="logo-text h-38 w-auto" @error="(e) => { (e.target as HTMLImageElement).src = logoSrc }" />
       </button>
       <p class="text-[11px] text-[var(--text-muted)] mt-1 px-1"></p>
     </div>
@@ -76,7 +99,41 @@ const navItems = computed(() => {
 
       <template v-if="auth.isLoggedIn">
         <div class="border-t border-[var(--border-default)] my-3"></div>
+        <template v-if="isCliente">
+          <button
+            @click="goClienteView('profissionais')"
+            :class="[
+              'w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-xl transition-colors text-left',
+              clienteView === 'profissionais'
+                ? 'bg-[color-mix(in_srgb,var(--accent-gold)_12%,transparent)] text-[var(--accent-gold)] font-semibold'
+                : 'text-[var(--text-muted)] hover:bg-[var(--bg-raised)]'
+            ]"
+          >
+            <Search class="w-5 h-5 shrink-0 text-[var(--accent-gold)]" />
+            Profissionais
+          </button>
+          <button
+            @click="goClienteView('pedidos')"
+            :class="[
+              'w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-xl transition-colors text-left',
+              clienteView === 'pedidos'
+                ? 'bg-[color-mix(in_srgb,var(--accent-gold)_12%,transparent)] text-[var(--accent-gold)] font-semibold'
+                : 'text-[var(--text-muted)] hover:bg-[var(--bg-raised)]'
+            ]"
+          >
+            <ClipboardList class="w-5 h-5 shrink-0 text-[var(--accent-gold)]" />
+            Meus Pedidos
+          </button>
+          <button
+            @click="goSolicitarOrcamento"
+            class="mt-2 w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-xl transition-colors text-left text-[var(--text-muted)] hover:bg-[var(--bg-raised)]"
+          >
+            <ClipboardCheck class="w-5 h-5 shrink-0 text-[var(--accent-gold)]" />
+            Solicitar Orçamento
+          </button>
+        </template>
         <button
+          v-else
           @click="navigate(dashboardRoute)"
           :class="[
             'w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-xl transition-colors text-left',

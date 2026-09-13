@@ -1,5 +1,5 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { verificarPeriodoGratis } from '../config/planos'
+import { verificarPeriodoGratis, DIAS_PERIODO_GRATIS } from '../config/planos'
 
 export function usePeriodoGratis(dataInicioGratisRef: import('vue').Ref<string | null | undefined>) {
   const tempoRestante = ref<{ emGratis: boolean; diasRestantes: number; dataExpiracao: Date | null }>({
@@ -42,7 +42,7 @@ export function usePeriodoGratis(dataInicioGratisRef: import('vue').Ref<string |
   const percentualRestante = computed(() => {
     if (!dataInicioGratisRef.value) return 0
     const inicio = new Date(dataInicioGratisRef.value).getTime()
-    const expiracao = tempoRestante.value.dataExpiracao?.getTime() ?? inicio + 60 * 24 * 60 * 60 * 1000
+    const expiracao = tempoRestante.value.dataExpiracao?.getTime() ?? inicio + DIAS_PERIODO_GRATIS * 24 * 60 * 60 * 1000
     const agora = Date.now()
     const total = expiracao - inicio
     const usado = agora - inicio

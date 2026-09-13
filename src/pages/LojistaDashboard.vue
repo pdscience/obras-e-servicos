@@ -483,10 +483,10 @@ function removerImagem(idx: number) {
               <div class="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-xl p-5 hover:border-[var(--border-raised)] transition-all hover:-translate-y-0.5">
                 <div class="flex items-start justify-between mb-2">
                   <span class="text-[var(--text-subtle)] text-xs uppercase tracking-wider font-semibold">Visualizações do Perfil</span>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5" style="color: rgb(126, 232, 250);"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5" style="color: rgb(15, 118, 110);"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
                 </div>
                 <p class="text-2xl font-bold text-[var(--text-primary)] font-mono">1.247</p>
-                <span class="text-xs font-medium" style="color: rgb(126, 232, 250);">+18%</span>
+                <span class="text-xs font-medium" style="color: rgb(15, 118, 110);">+18%</span>
               </div>
               <div class="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-xl p-5 hover:border-[var(--border-raised)] transition-all hover:-translate-y-0.5">
                 <div class="flex items-start justify-between mb-2">

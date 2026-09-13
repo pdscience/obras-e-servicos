@@ -171,7 +171,7 @@ export const useAuthStore = defineStore('auth', () => {
     tipo: string = 'cliente',
     telefone?: string,
     // Compatibilidade com o fluxo promocional (?gratuito=true). O período
-    // gratuito de 60 dias da inauguração é concedido a todos os novos
+    // gratuito de 30 dias da inauguração é concedido a todos os novos
     // profissionais/lojistas via data_inicio_gratis; o plano Ouro efetivo
     // durante o período é resolvido por obterPlanoEficaz() em src/config/planos.ts.
     _gratuito = false
@@ -218,7 +218,11 @@ export const useAuthStore = defineStore('auth', () => {
           }
           const targetRole = roleMap[tipo]
           if (targetRole && !user.value.tipos.includes(targetRole)) {
-            await adicionarRole(targetRole)
+            const okRole = await adicionarRole(targetRole)
+            if (!okRole) {
+              error.value = 'Não foi possível adicionar este perfil à sua conta. Tente novamente.'
+              return false
+            }
             // Update current mode to the new role
             currentMode.value = targetRole
           }
@@ -248,7 +252,7 @@ export const useAuthStore = defineStore('auth', () => {
             usuario_id: user.value.id,
             nome,
             categoria: 'Geral',
-            // Inicia o período gratuito de 60 dias (plano Ouro efetivo durante o período)
+            // Inicia o período gratuito de 30 dias (plano Ouro efetivo durante o período)
             data_inicio_gratis: new Date().toISOString(),
           })
         } catch (e) {
@@ -327,6 +331,8 @@ export const useAuthStore = defineStore('auth', () => {
           categoria: profileData?.categoria ?? 'Geral',
           subcategoria: profileData?.subcategoria,
           especialidades: profileData?.especialidades,
+          descricao: profileData?.descricao,
+          anos_experiencia: profileData?.anos_experiencia,
           uf: profileData?.uf,
           cidade: profileData?.cidade,
           data_inicio_gratis: new Date().toISOString(),

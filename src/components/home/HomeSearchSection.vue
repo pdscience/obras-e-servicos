@@ -44,11 +44,6 @@ function pick(opt: string) {
   query.value = opt
 }
 
-function setType(type: 'profissional' | 'lojista') {
-  searchType.value = type
-  query.value = ''
-}
-
 function submit() {
   emit('search', searchType.value, query.value, selectedUf.value, selectedCity.value)
 }

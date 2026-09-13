@@ -1,40 +1,48 @@
 <script setup lang="ts">
 import { Mail, Phone, MapPin, ExternalLink } from '@lucide/vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
+import { nextTick } from 'vue'
 import logoSrc from '@/assets/logo.png'
 
 const router = useRouter()
-
-function goRegister() {
-  router.push({ name: 'register' })
-}
+const route = useRoute()
 
 function goRegisterProfessional() {
   router.push({ name: 'register', query: { tipo: 'professional' } })
 }
 
-function goRegisterLojista() {
-  router.push({ name: 'register', query: { tipo: 'lojista' } })
-}
-
-function goHome() {
-  router.push({ name: 'home' })
-}
-
-function goCategories() {
-  router.push({ name: 'categories' })
+async function goSection(id: string) {
+  if (route.name === 'home') {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    return
+  }
+  await router.push({ name: 'home' })
+  await nextTick()
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 function goStores() {
   router.push({ name: 'stores' })
 }
 
-function goPlanos() {
-  router.push({ name: 'planos' })
+async function goPlanos() {
+  if (route.name === 'home') {
+    document.getElementById('planos')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    return
+  }
+  await router.push({ name: 'home' })
+  await nextTick()
+  document.getElementById('planos')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-function goHowItWorks() {
-  router.push({ name: 'how-it-works' })
+async function goHowItWorks() {
+  if (route.name === 'home') {
+    document.getElementById('como-funciona')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    return
+  }
+  await router.push({ name: 'home' })
+  await nextTick()
+  document.getElementById('como-funciona')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 function goFaq() {
@@ -45,10 +53,10 @@ const colunas = [
   {
     titulo: 'Para Clientes',
     links: [
-      { label: 'Encontrar profissionais', action: goCategories },
+      { label: 'Encontrar profissionais', action: () => goSection('categorias') },
       { label: 'Encontrar lojistas', action: goStores },
       { label: 'Como funciona', action: goHowItWorks },
-      { label: 'Avaliações', action: goHome },
+      { label: 'Avaliações', action: () => goSection('avaliacoes') },
     ],
   },
   {
@@ -61,10 +69,10 @@ const colunas = [
     ],
   },
   {
-    titulo: 'A OS',
+    titulo: 'A Obras & Serviços',
     links: [
-      { label: 'Quem somos', action: goHome },
-      { label: 'Contato', action: goFaq },
+      { label: 'Sobre a Obras & Serviços', action: () => goSection('sobre') },
+      { label: 'Faq', action: goFaq },
       { label: 'Termos de uso', action: goFaq },
       { label: 'Privacidade', action: goFaq },
     ],

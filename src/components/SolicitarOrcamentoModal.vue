@@ -241,35 +241,35 @@ function handleCreated() {
         <div v-if="step === 3" class="p-6 space-y-5">
           <div class="bg-[var(--bg-raised)] border border-[var(--border-default)] rounded-xl p-5 space-y-3">
             <div class="flex items-center justify-between">
-              <span class="text-sm text-white/60">Nome</span>
-              <span class="text-sm text-white font-medium">{{ form.cliente_nome }}</span>
+              <span class="text-sm text-[var(--text-muted)]">Nome</span>
+              <span class="text-sm text-[var(--text-primary)] font-medium">{{ form.cliente_nome }}</span>
             </div>
             <div class="flex items-center justify-between">
-              <span class="text-sm text-white/60">Contato</span>
-              <span class="text-sm text-white font-medium">{{ form.cliente_contato }}</span>
+              <span class="text-sm text-[var(--text-muted)]">Contato</span>
+              <span class="text-sm text-[var(--text-primary)] font-medium">{{ form.cliente_contato }}</span>
             </div>
             <div class="flex items-center justify-between">
-              <span class="text-sm text-white/60">Profissão</span>
+              <span class="text-sm text-[var(--text-muted)]">Profissão</span>
               <span class="text-sm text-[var(--accent-gold)] font-medium">{{ form.categoria }}</span>
             </div>
             <div class="flex items-center justify-between">
-              <span class="text-sm text-white/60">Urgência</span>
-              <span class="text-sm text-white font-medium capitalize">{{ form.urgencia }}</span>
+              <span class="text-sm text-[var(--text-muted)]">Urgência</span>
+              <span class="text-sm text-[var(--text-primary)] font-medium capitalize">{{ form.urgencia }}</span>
             </div>
-            <div class="pt-2 border-t border-white/10">
-              <span class="text-sm text-white/60 block mb-1">Descrição</span>
-              <p class="text-sm text-white">{{ form.descricao }}</p>
+            <div class="pt-2 border-t border-[var(--border-default)]">
+              <span class="text-sm text-[var(--text-muted)] block mb-1">Descrição</span>
+              <p class="text-sm text-[var(--text-primary)]">{{ form.descricao }}</p>
             </div>
-            <div class="pt-2 border-t border-white/10">
-              <span class="text-sm text-white/60 block mb-1">Endereço</span>
-              <p class="text-sm text-white">{{ form.endereco }}</p>
+            <div class="pt-2 border-t border-[var(--border-default)]">
+              <span class="text-sm text-[var(--text-muted)] block mb-1">Endereço</span>
+              <p class="text-sm text-[var(--text-primary)]">{{ form.endereco }}</p>
             </div>
-            <div class="flex items-center justify-between pt-2 border-t border-white/10">
-              <span class="text-sm text-white/60">Data preferida</span>
-              <span class="text-sm text-white font-medium">{{ form.data_preferida ? new Date(form.data_preferida).toLocaleDateString('pt-BR') : 'Não definida' }}</span>
+            <div class="flex items-center justify-between pt-2 border-t border-[var(--border-default)]">
+              <span class="text-sm text-[var(--text-muted)]">Data preferida</span>
+              <span class="text-sm text-[var(--text-primary)] font-medium">{{ form.data_preferida ? new Date(form.data_preferida).toLocaleDateString('pt-BR') : 'Não definida' }}</span>
             </div>
             <div class="flex items-center justify-between">
-              <span class="text-sm text-white/60">Orçamento</span>
+              <span class="text-sm text-[var(--text-muted)]">Orçamento</span>
               <span class="text-sm text-[var(--accent-green)] font-medium">{{ form.orcamento ? `R$ ${form.orcamento.toLocaleString('pt-BR')}` : 'Não definido' }}</span>
             </div>
           </div>

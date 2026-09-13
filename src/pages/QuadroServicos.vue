@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { Briefcase, MapPin, Clock, DollarSign, AlertCircle, Calendar, Search, X, User, FileText } from '@lucide/vue'
 import { listarServicosAbertos, aceitarServico, negociarServico, obterPerfilProfissional } from '../services/api'
-import { PLANOS } from '../config/planos'
+import { PLANOS, podeAtuarProfissional } from '../config/planos'
 import SolicitarOrcamentoModal from '@/components/SolicitarOrcamentoModal.vue'
 import type { ServiceRequest, PlanoProfissional } from '../types'
 import { useAuthStore } from '../stores/auth'
@@ -82,7 +82,8 @@ async function carregar() {
         perfilProfissionalId.value = perfil.id
         isProfessional.value = true
         professionalCategory.value = perfil.categoria
-        hasPlan.value = perfil.premium === true
+        // Trial ativo OU plano pago: pode aceitar/negociar
+        hasPlan.value = podeAtuarProfissional(perfil.premium, perfil.data_inicio_gratis)
         profissionalPlano.value = perfil.premium_plano || null
       }
     }

@@ -163,8 +163,8 @@
   color: #f85149;
 }
 .p-badge-info {
-  background: rgba(126, 232, 250, 0.18);
-  color: #7ee8fa;
+  background: rgba(15, 118, 110, 0.18);
+  color: #0f766e;
 }
 
 /* ─── Toast ─── */
@@ -354,9 +354,9 @@
   padding: 0.75rem 1rem;
 }
 .p-message-info {
-  background: rgba(126, 232, 250, 0.08);
-  border: 1px solid rgba(126, 232, 250, 0.2);
-  color: #7ee8fa;
+  background: rgba(15, 118, 110, 0.08);
+  border: 1px solid rgba(15, 118, 110, 0.2);
+  color: #0f766e;
 }
 .p-message-success {
   background: rgba(63, 185, 80, 0.08);

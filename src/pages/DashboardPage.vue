@@ -11,7 +11,7 @@ import {
 import insforge, { listarServicosDoProfissional, listarServicosAbertos, concluirServico, cancelarServico, negociarServico, obterPerfilProfissional, criarPerfilProfissional, atualizarPerfilProfissional, obterPerfilUsuario, atualizarPerfilUsuario, listarReviews, listarCategorias, listarTodasProfissoes, listarCategoriasProfissional, salvarCategoriasProfissional, uploadPortfolioImage } from '../services/api'
 import { getCitiesByUf } from '../data/cities'
 import type { ServiceRequest, CategoriaDB, ProfissaoDB, ProfissionalCategoriaView, PlanoProfissional, PortfolioItem } from '../types'
-import { PLANOS_PROFISSIONAIS, limiteCategoriasPlano, limiteFotosPlano, PLANOS, obterPlanoEficaz } from '../config/planos'
+import { PLANOS_PROFISSIONAIS, limiteCategoriasPlano, limiteFotosPlano, PLANOS, obterPlanoEficaz, podeAtuarProfissional } from '../config/planos'
 import { useAuthStore } from '../stores/auth'
 import { usePeriodoGratis } from '../composables/usePeriodoGratis'
 
@@ -186,6 +186,9 @@ const planOptions = PLANOS_PROFISSIONAIS.map(p => ({
 
 const planoEficaz = computed(() => obterPlanoEficaz(proPremiumPlano.value, proPremium.value, proDataInicioGratis.value))
 
+// Pós-trial: só recebe/negocia orçamentos com trial ativo ou plano pago
+const podeReceberOrcamentos = computed(() => podeAtuarProfissional(proPremium.value && !premiumExpirado.value, proDataInicioGratis.value))
+
 const maxCategorias = computed(() => limiteCategoriasPlano(planoEficaz.value.plano))
 const podeAdicionar = computed(() => editCategorias.value.length < maxCategorias.value)
 
@@ -257,7 +260,7 @@ const stats = computed(() => {
     { label: 'Serviços Ativos', value: pendentes.toString(), change: '', icon: Briefcase, color: '#f0a500' },
     { label: 'Serviços Concluídos', value: concluidos.toString(), change: '', icon: CheckCircle2, color: '#3fb950' },
     { label: 'Avaliação Média', value: pro.value.rating.toString(), change: '', icon: Star, color: '#f0b429' },
-    { label: 'Faturamento', value: `R$ ${faturamento.toLocaleString('pt-BR')}`, change: '', icon: DollarSign, color: '#7ee8fa' }
+    { label: 'Faturamento', value: `R$ ${faturamento.toLocaleString('pt-BR')}`, change: '', icon: DollarSign, color: '#0f766e' }
   ]
 })
 
@@ -276,27 +279,6 @@ function getStatusBadge(status: string) {
   }
   return { style: styles[status] || '', label: labels[status] || status }
 }
-
-const monthlyStats = computed(() => {
-  const concluidos = meusServicos.value.filter(s => s.status === 'concluido').length
-  const andamento = meusServicos.value.filter(s => s.status === 'em_andamento').length
-  const abertos = meusServicos.value.filter(s => s.status === 'aberto').length
-  const cancelados = meusServicos.value.filter(s => s.status === 'cancelado').length
-  return [
-    { label: 'Concluídos', value: concluidos.toString(), icon: CheckCircle2, color: '#3fb950' },
-    { label: 'Em andamento', value: andamento.toString(), icon: Clock, color: '#f0a500' },
-    { label: 'Abertos', value: abertos.toString(), icon: AlertCircle, color: '#f0b429' },
-    { label: 'Cancelados', value: cancelados.toString(), icon: XCircle, color: '#f85149' }
-  ]
-})
-
-const monthlyStatsOrdenado = computed(() => {
-  const itens = monthlyStats.value.map(s => ({ ...s, num: Number(s.value) || 0 }))
-  const max = Math.max(1, ...itens.map(s => s.num))
-  return itens
-    .sort((a, b) => b.num - a.num)
-    .map(s => ({ ...s, pct: Math.round((s.num / max) * 100) }))
-})
 
 const ultimaReview = computed(() => {
   const r = pro.value.reviews[0]
@@ -387,6 +369,12 @@ async function carregar() {
         editDataNascimento.value = perfilUsuario.data_nascimento ?? ''
         if (!editUf.value) editUf.value = perfilUsuario.uf ?? ''
         if (!editCidade.value) editCidade.value = perfilUsuario.cidade ?? ''
+        // Fallback: se o perfil profissional ainda não tem endereço próprio,
+        // exibe o da conta (ex.: editado pelo modal "Editar Perfil").
+        const pu = perfilUsuario as unknown as Record<string, string | null | undefined>
+        if (!editEndereco.value && pu.endereco) editEndereco.value = pu.endereco
+        if (!editBairro.value && pu.bairro) editBairro.value = pu.bairro
+        if (!editCep.value && pu.cep) editCep.value = pu.cep
       }
     }
     meusServicos.value = await listarServicosDoProfissional(pro.value.id)
@@ -420,6 +408,11 @@ async function handleCancelar(servicoId: string) {
 }
 
 function abrirNegociacao(servicoId: string) {
+  // Sem trial ativo e sem plano pago: direciona para upgrade
+  if (!podeReceberOrcamentos.value) {
+    showPlansModal.value = true
+    return
+  }
   servicoParaNegociar.value = servicoId
   whatsappModal.value = true
 }
@@ -520,6 +513,9 @@ async function salvarPerfil() {
       }
     }
     if (auth.user) {
+      // Mantém usuarios/perfis_usuario sincronizados com o perfil profissional,
+      // incluindo endereço (o modal "Editar Perfil" lê a partir dessas tabelas).
+      const enderecoCompleto = [editEndereco.value.trim(), editNumero.value.trim()].filter(Boolean).join(', ')
       await atualizarPerfilUsuario(auth.user.id, {
         nome,
         telefone: editTelefone.value,
@@ -527,6 +523,9 @@ async function salvarPerfil() {
         data_nascimento: editDataNascimento.value,
         uf: editUf.value,
         cidade: editCidade.value,
+        endereco: enderecoCompleto,
+        bairro: editBairro.value,
+        cep: editCep.value,
       })
     }
     notificarSucesso()
@@ -621,6 +620,8 @@ function applyTabFromRoute() {
   const tab = route.query.tab as string | undefined
   if (tab && ['overview', 'requests', 'job-board', 'reviews', 'settings'].includes(tab)) {
     activeTab.value = tab
+  } else {
+    activeTab.value = 'overview'
   }
 }
 
@@ -700,119 +701,118 @@ onMounted(() => {
           </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div class="lg:col-span-2 bg-[var(--bg-card)] border border-[var(--border-default)] rounded-2xl shadow-sm overflow-hidden">
-            <div class="p-5 border-b border-[var(--border-default)] flex items-center justify-between">
-              <h2 class="font-semibold text-[var(--text-secondary)]">Meus Serviços</h2>
-              <button class="text-[var(--accent-gold)] text-sm font-medium hover:text-[var(--accent-teal)]">Ver Todos</button>
-            </div>
-            <div v-if="meusServicos.length === 0" class="p-10 text-center">
-              <div class="w-14 h-14 mx-auto mb-4 rounded-2xl bg-[var(--bg-raised)] flex items-center justify-center">
-                <Briefcase class="w-7 h-7 text-[var(--text-subtle)]" />
+          <div class="lg:col-span-2 bg-[var(--bg-card)] border border-[var(--border-default)] rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+            <div class="p-5 border-b border-[var(--border-default)] flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl bg-[color-mix(in_srgb,var(--accent-gold)_12%,transparent)] flex items-center justify-center shrink-0">
+                <Search class="w-4.5 h-4.5 text-[var(--accent-gold)]" />
               </div>
-              <p class="text-[var(--text-muted)] font-medium">Nenhum serviço ainda.</p>
-              <p class="text-[var(--text-subtle)] text-sm mt-1">Os serviços aparecerão aqui quando você aceitar.</p>
+              <h2 class="font-semibold text-[var(--text-secondary)]">Serviços Disponíveis</h2>
+              <span class="ml-auto px-2.5 py-0.5 text-xs font-semibold rounded-full" style="background: color-mix(in srgb, var(--accent-gold) 12%, transparent); color: var(--accent-gold);">{{ servicosAbertos.length }} abertos</span>
             </div>
-            <div v-else class="divide-y divide-[var(--border-default)]">
-              <div v-for="servico in meusServicos" :key="servico.id" class="p-5 hover:bg-[var(--bg-raised)]/60 transition-colors">
-                <div class="flex items-start justify-between gap-4">
-                  <div class="flex items-start gap-3">
-                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--accent-gold)]/20 to-[var(--accent-gold)]/5 flex items-center justify-center shrink-0 ring-1 ring-[var(--accent-gold)]/15">
-                      <span class="text-[var(--accent-gold)] font-bold text-sm">{{ servico.cliente_nome.charAt(0) }}</span>
-                    </div>
-                    <div>
-                      <div class="flex items-center gap-2 mb-1">
-                        <h3 class="font-semibold text-[var(--text-secondary)]">{{ servico.cliente_nome }}</h3>
-                        <span :class="['px-2 py-1 rounded-full text-xs font-medium', getStatusBadge(servico.status).style]">{{ getStatusBadge(servico.status).label }}</span>
-                      </div>
-                      <p class="text-sm text-[var(--text-muted)]">{{ servico.descricao.slice(0, 80) }}{{ servico.descricao.length > 80 ? '...' : '' }}</p>
-                      <p class="text-sm text-[var(--text-subtle)] mt-1">{{ servico.endereco }} • {{ new Date(servico.created_at).toLocaleDateString('pt-BR') }}</p>
-                    </div>
-                  </div>
-                  <div class="text-right shrink-0">
-                    <p v-if="servico.orcamento" class="font-semibold font-mono text-[var(--text-primary)]">R$ {{ servico.orcamento.toLocaleString('pt-BR') }}</p>
-                    <div class="flex items-center gap-1 mt-2">
-                      <button
-                        v-if="servico.status === 'aberto'"
-                        @click="abrirNegociacao(servico.id)"
-                        class="px-3 py-1.5 bg-[var(--accent-gold)] text-[var(--text-on-accent)] text-xs rounded-lg font-medium hover:bg-[var(--accent-dark-gold)] transition-colors"
-                      >
-                        Negociar
-                      </button>
-                      <button
-                        v-if="servico.status === 'em_andamento'"
-                        @click="handleConcluir(servico.id)"
-                        class="px-3 py-1.5 bg-[var(--accent-green)] text-[var(--text-on-accent)] text-xs rounded-lg font-medium hover:opacity-90 transition-colors"
-                      >
-                        Concluir
-                      </button>
-                      <button
-                        v-if="servico.status === 'aberto' || servico.status === 'em_andamento'"
-                        @click="handleCancelar(servico.id)"
-                        class="p-1.5 hover:bg-[var(--accent-red)]/10 rounded-lg transition-colors"
-                        title="Cancelar"
-                      >
-                        <XCircle class="w-4 h-4 text-[var(--accent-red)]" />
-                      </button>
-                    </div>
-                  </div>
+            <div class="p-5 space-y-3">
+              <div v-if="servicosAbertos.length === 0" class="text-center py-4 border border-dashed border-[var(--border-raised)] rounded-xl bg-[var(--bg-raised)]/40">
+                <p class="text-[var(--text-subtle)] text-sm">Nenhum serviço disponível no momento</p>
+              </div>
+              <div v-for="servico in servicosAbertos.slice(0, 3)" :key="servico.id" class="flex items-start gap-3 p-3 bg-[var(--bg-raised)] rounded-xl border border-[var(--border-default)] hover:border-[var(--accent-gold)]/40 hover:shadow-md hover:-translate-y-0.5 transition-all">
+                <div class="w-10 h-10 bg-[color-mix(in srgb,var(--accent-gold) 10%,transparent)] rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Briefcase class="w-5 h-5 text-[var(--accent-gold)]" />
                 </div>
+                <div class="flex-1 min-w-0">
+                  <h4 class="font-medium text-[var(--text-secondary)] text-sm truncate">{{ servico.descricao.slice(0, 50) }}{{ servico.descricao.length > 50 ? '...' : '' }}</h4>
+                  <p class="text-xs text-[var(--text-muted)]">{{ servico.cliente_nome }} • {{ servico.endereco.split(',')[0] }}</p>
+                  <p v-if="servico.orcamento" class="text-xs text-[var(--accent-green)] mt-1 font-medium">R$ {{ servico.orcamento.toLocaleString('pt-BR') }}</p>
+                </div>
+                  <button @click="abrirDetalhes(servico)" class="inline-flex items-center gap-1 px-2.5 py-1 bg-[var(--bg-raised)] border border-[var(--border-default)] text-[var(--text-muted)] text-xs rounded-lg font-medium whitespace-nowrap hover:text-[var(--accent-gold)] hover:border-[var(--accent-gold)]/40 transition-colors" title="Ver detalhes do pedido">
+                    <Eye class="w-3.5 h-3.5" /> Detalhes
+                  </button>
+                  <button @click="abrirNegociacao(servico.id)" class="px-2.5 py-1 bg-[var(--accent-gold)] text-[var(--text-on-accent)] text-xs rounded-lg font-medium whitespace-nowrap hover:bg-[var(--accent-dark-gold)] transition-colors">Negociar</button>
               </div>
             </div>
           </div>
 
           <div class="lg:col-span-1 space-y-6">
-            <div class="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-2xl shadow-sm overflow-hidden">
-              <div class="p-5 border-b border-[var(--border-default)] flex items-center justify-between">
-                <h2 class="font-semibold text-[var(--text-secondary)]">Serviços Disponíveis</h2>
-                <span class="px-2.5 py-0.5 text-xs font-semibold rounded-full" style="background: color-mix(in srgb, var(--accent-gold) 12%, transparent); color: var(--accent-gold);">{{ servicosAbertos.length }} abertos</span>
-              </div>
-              <div class="p-5 space-y-3">
-                <div v-if="servicosAbertos.length === 0" class="text-center py-4">
-                  <p class="text-[var(--text-subtle)] text-sm">Nenhum serviço disponível no momento</p>
+            <div class="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+              <div class="p-5 border-b border-[var(--border-default)] flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-[color-mix(in_srgb,var(--accent-gold)_12%,transparent)] flex items-center justify-center shrink-0">
+                  <Briefcase class="w-4.5 h-4.5 text-[var(--accent-gold)]" />
                 </div>
-                <div v-for="servico in servicosAbertos.slice(0, 3)" :key="servico.id" class="flex items-start gap-3 p-3 bg-[var(--bg-raised)] rounded-xl border border-[var(--border-default)] hover:border-[var(--accent-gold)]/30 transition-colors">
-                  <div class="w-10 h-10 bg-[color-mix(in srgb,var(--accent-gold) 10%,transparent)] rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Briefcase class="w-5 h-5 text-[var(--accent-gold)]" />
+                <h2 class="font-semibold text-[var(--text-secondary)]">Meus Serviços</h2>
+                <span v-if="meusServicos.length > 0" class="px-2.5 py-0.5 text-xs font-semibold rounded-full" style="background: color-mix(in srgb, var(--accent-gold) 12%, transparent); color: var(--accent-gold);">{{ meusServicos.length }}</span>
+                <button class="ml-auto text-[var(--accent-gold)] text-sm font-medium hover:text-[var(--accent-teal)]">Ver Todos</button>
+              </div>
+              <div v-if="meusServicos.length === 0" class="p-5">
+                <div class="p-10 text-center border border-dashed border-[var(--border-raised)] rounded-xl bg-[var(--bg-raised)]/40">
+                  <div class="w-14 h-14 mx-auto mb-4 rounded-2xl bg-[color-mix(in_srgb,var(--accent-gold)_12%,transparent)] flex items-center justify-center">
+                    <Briefcase class="w-7 h-7 text-[var(--accent-gold)]" />
                   </div>
-                  <div class="flex-1 min-w-0">
-                    <h4 class="font-medium text-[var(--text-secondary)] text-sm truncate">{{ servico.descricao.slice(0, 50) }}{{ servico.descricao.length > 50 ? '...' : '' }}</h4>
-                    <p class="text-xs text-[var(--text-muted)]">{{ servico.cliente_nome }} • {{ servico.endereco.split(',')[0] }}</p>
-                    <p v-if="servico.orcamento" class="text-xs text-[var(--accent-green)] mt-1 font-medium">R$ {{ servico.orcamento.toLocaleString('pt-BR') }}</p>
+                  <p class="text-[var(--text-muted)] font-medium">Nenhum serviço ainda.</p>
+                  <p class="text-[var(--text-subtle)] text-sm mt-1">Os serviços aparecerão aqui quando você aceitar.</p>
+                </div>
+              </div>
+              <div v-else class="divide-y divide-[var(--border-default)]">
+                <div v-for="servico in meusServicos" :key="servico.id" class="p-5 hover:bg-[var(--bg-raised)]/60 transition-colors">
+                  <div class="flex flex-wrap items-start justify-between gap-4">
+                    <div class="flex items-start gap-3 flex-1 min-w-0">
+                      <div class="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--accent-gold)]/20 to-[var(--accent-gold)]/5 flex items-center justify-center shrink-0 ring-1 ring-[var(--accent-gold)]/15">
+                        <span class="text-[var(--accent-gold)] font-bold text-sm">{{ servico.cliente_nome.charAt(0) }}</span>
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <div class="flex flex-wrap items-center gap-2 mb-1">
+                          <h3 class="font-semibold text-[var(--text-secondary)]">{{ servico.cliente_nome }}</h3>
+                          <span :class="['px-2 py-1 rounded-full text-xs font-medium', getStatusBadge(servico.status).style]">{{ getStatusBadge(servico.status).label }}</span>
+                        </div>
+                        <p class="text-sm text-[var(--text-muted)]">{{ servico.descricao.slice(0, 80) }}{{ servico.descricao.length > 80 ? '...' : '' }}</p>
+                        <p class="text-sm text-[var(--text-subtle)] mt-1">{{ servico.endereco }} • {{ new Date(servico.created_at).toLocaleDateString('pt-BR') }}</p>
+                      </div>
+                    </div>
+                    <div class="text-right shrink-0">
+                      <p v-if="servico.orcamento" class="font-semibold font-mono text-[var(--text-primary)]">R$ {{ servico.orcamento.toLocaleString('pt-BR') }}</p>
+                      <div class="flex items-center gap-1 mt-2">
+                        <button
+                          v-if="servico.status === 'aberto'"
+                          @click="abrirNegociacao(servico.id)"
+                          class="px-3 py-1.5 bg-[var(--accent-gold)] text-[var(--text-on-accent)] text-xs rounded-lg font-medium hover:bg-[var(--accent-dark-gold)] transition-colors"
+                        >
+                          Negociar
+                        </button>
+                        <button
+                          v-if="servico.status === 'em_andamento'"
+                          @click="handleConcluir(servico.id)"
+                          class="px-3 py-1.5 bg-[var(--accent-green)] text-[var(--text-on-accent)] text-xs rounded-lg font-medium hover:opacity-90 transition-colors"
+                        >
+                          Concluir
+                        </button>
+                        <button
+                          v-if="servico.status === 'aberto' || servico.status === 'em_andamento'"
+                          @click="handleCancelar(servico.id)"
+                          class="p-1.5 hover:bg-[var(--accent-red)]/10 rounded-lg transition-colors"
+                          title="Cancelar"
+                        >
+                          <XCircle class="w-4 h-4 text-[var(--accent-red)]" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <button @click="abrirNegociacao(servico.id)" class="px-2.5 py-1 bg-[var(--accent-gold)] text-[var(--text-on-accent)] text-xs rounded-lg font-medium whitespace-nowrap hover:bg-[var(--accent-dark-gold)] transition-colors">Negociar</button>
                 </div>
               </div>
             </div>
 
-              <div class="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-2xl shadow-sm p-5">
-                <h2 class="font-semibold text-[var(--text-secondary)] mb-4">Resumo</h2>
-                <div class="space-y-4">
-                  <div v-for="item in monthlyStatsOrdenado" :key="item.label" class="space-y-1.5">
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center gap-2">
-                        <div class="w-8 h-8 rounded-lg flex items-center justify-center" :style="{ background: item.color + '18' }"><component :is="item.icon" class="w-4 h-4" :style="{ color: item.color }" /></div>
-                        <span class="text-sm text-[var(--text-muted)]">{{ item.label }}</span>
-                      </div>
-                      <span class="font-semibold text-[var(--text-primary)] font-mono">{{ item.value }}</span>
-                    </div>
-                    <div class="w-full bg-[var(--bg-raised)] rounded-full h-2 overflow-hidden">
-                      <div class="h-2 rounded-full transition-all duration-500" :style="{ width: item.pct + '%', background: item.color }"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <!-- Card Resumo removido -->
 
-            <div v-if="ultimaReview" class="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-2xl shadow-sm overflow-hidden">
-              <div class="p-5 border-b border-[var(--border-default)] flex items-center justify-between">
+            <div v-if="ultimaReview" class="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+              <div class="p-5 border-b border-[var(--border-default)] flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-[color-mix(in_srgb,var(--accent-amber)_12%,transparent)] flex items-center justify-center shrink-0">
+                  <Star class="w-4.5 h-4.5 text-[var(--accent-amber)] fill-[var(--accent-amber)]" />
+                </div>
                 <h2 class="font-semibold text-[var(--text-secondary)]">Última Avaliação</h2>
-                <div class="flex items-center gap-1"><Star class="w-4 h-4 text-[var(--accent-amber)] fill-[var(--accent-amber)]" /><span class="font-semibold text-[var(--text-primary)] font-mono">{{ pro.rating }}</span></div>
+                <div class="ml-auto flex items-center gap-1"><Star class="w-4 h-4 text-[var(--accent-amber)] fill-[var(--accent-amber)]" /><span class="font-semibold text-[var(--text-primary)] font-mono">{{ pro.rating }}</span></div>
               </div>
               <div class="p-5">
                 <div class="flex items-start gap-3">
-                  <img :src="ultimaReview.clientAvatar" alt="Client" class="w-11 h-11 rounded-full object-cover ring-2 ring-[var(--border-raised)]" />
-                  <div>
+                  <img :src="ultimaReview.clientAvatar" alt="Client" class="w-11 h-11 rounded-full object-cover ring-2 ring-[var(--accent-gold)]/40" />
+                  <div class="flex-1 min-w-0 border-l-2 border-[var(--accent-gold)]/40 pl-3">
                     <div class="flex items-center gap-2 mb-1 flex-wrap"><span class="font-semibold text-[var(--text-secondary)] text-sm">{{ ultimaReview.clientName }}</span><div class="flex items-center gap-0.5"><Star v-for="s in 5" :key="s" class="w-3 h-3 text-[var(--accent-amber)] fill-[var(--accent-amber)]" /></div></div>
-                    <p class="text-sm text-[var(--text-muted)]">"{{ ultimaReview.comment }}"</p>
+                    <p class="text-sm text-[var(--text-muted)] italic">"{{ ultimaReview.comment }}"</p>
                     <p class="text-xs text-[var(--text-subtle)] mt-1">{{ ultimaReview.serviceType }} • {{ new Date(ultimaReview.date).toLocaleDateString('pt-BR') }}</p>
                   </div>
                 </div>
@@ -1220,7 +1220,7 @@ onMounted(() => {
                     <AlertCircle class="w-5 h-5" />
                     <span class="font-semibold">Período Gratuito Expirado</span>
                   </div>
-                  <p class="text-white/80 text-sm mb-3">Seu período de 60 dias gratuitos expirou. Escolha um plano para continuar com destaque.</p>
+                  <p class="text-white/80 text-sm mb-3">Seu período de 30 dias gratuitos expirou. Escolha um plano para voltar a receber orçamentos e continuar com destaque.</p>
                   <button @click="showPlansModal = true" class="px-4 py-2 bg-white text-orange-600 font-semibold rounded-lg text-sm hover:bg-gray-100 transition-colors">Escolher Plano</button>
                 </div>
                 <!-- Plano Pago Ativo -->
@@ -1279,7 +1279,7 @@ onMounted(() => {
               </div>
               <div>
                 <h3 class="font-semibold">Período Gratuito Expirado</h3>
-                <p class="text-white/70 text-xs">Escolha um plano para continuar em destaque.</p>
+                <p class="text-white/70 text-xs">Escolha um plano para voltar a receber orçamentos.</p>
               </div>
             </div>
             <button @click="showPlansModal = true" class="w-full py-3 bg-white text-orange-600 font-semibold rounded-xl text-sm hover:bg-gray-100 transition-colors">Escolher Plano</button>

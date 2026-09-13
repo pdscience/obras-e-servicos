@@ -8,8 +8,12 @@ import VueApexCharts from 'vue3-apexcharts'
 
 import App from './App.vue'
 import router from './router'
+import { useTheme } from './composables/useTheme'
 import './index.css'
 import './styles/primevue.css'
+
+// Inicializa o tema salvo (aplica data-theme no <html>)
+useTheme()
 
 const app = createApp(App)
 const head = createHead()

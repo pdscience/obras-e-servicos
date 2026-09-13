@@ -5,7 +5,7 @@ import {
   ArrowLeft, Star, MapPin, CheckCircle2, Crown,
   Phone, MessageCircle, Briefcase, Wrench, Hammer, Shovel,
   Paintbrush, House, Zap, Wind, Cpu, Frame, Sparkles, Trees,
-  Truck, Leaf, Shield, Building2, Users, Award, Clock
+  Truck, Leaf, Shield, Building2, Users, Award, Clock, X
 } from '@lucide/vue'
 import CategoryFilters from '../components/CategoryFilters.vue'
 import { professionals, mainCategories } from '../data/mockData'
@@ -13,7 +13,7 @@ import { listarProfissionaisPorCategoria, listarTodasProfissoes } from '../servi
 import { rankingProfissionais } from '../utils/matching'
 import type { Component } from 'vue'
 import type { MainCategory, Professional } from '../types'
-import { CORES_PLANO, PLANOS, obterPlanoEficaz } from '../config/planos'
+import { CORES_PLANO, PLANOS, obterPlanoEficaz, podeAtuarProfissional } from '../config/planos'
 
 function getPlanInfo(pro: Professional) {
   const { plano, isGratis } = obterPlanoEficaz(pro.premium_plano, pro.premium, pro.data_inicio_gratis)
@@ -21,6 +21,11 @@ function getPlanInfo(pro: Professional) {
   const nome = PLANOS[plano].nome
   const label = isGratis ? `${nome} (Grátis)` : nome
   return { plano, cores, nome, label, isGratis }
+}
+
+// Contato direto oculto quando trial expirado sem plano pago (anti-bypass do upgrade)
+function podeContato(pro: Professional) {
+  return podeAtuarProfissional(pro.premium, pro.data_inicio_gratis)
 }
 
 const route = useRoute()
@@ -41,15 +46,6 @@ const mainCategory = computed<MainCategory>(() => {
   const slug = route.params.slug as string
   return mainCategories.find(mc => mc.id === slug) || mainCategories[0]
 })
-
-const emit = defineEmits<{
-  back: []
-  viewProfile: [professional: Professional]
-  'update:uf': [value: string | null]
-  'update:city': [value: string | null]
-  'update:searchTerm': [value: string]
-  clearFilters: []
-}>()
 
 const iconMap: Record<string, Component> = {
   Hammer, Shovel, Paintbrush, House, Zap, Wind, Cpu, Frame,
@@ -137,9 +133,23 @@ const filteredPros = computed(() => {
 
 const hasAnyPro = computed(() => visibleCategoryPros.value.length > 0)
 
-const availableProfessions = computed(() =>
-  professionGroups.value.filter(g => g.professionals.length > 0)
-)
+const activeProfessionFilter = computed<string | null>(() => {
+  if (selectedProfession.value !== 'all') return selectedProfession.value
+  if (filterCategoryLocal.value) return filterCategoryLocal.value
+  return null
+})
+
+const activeProfessionCount = computed(() => {
+  if (!activeProfessionFilter.value) return visibleCategoryPros.value.length
+  const group = professionGroups.value.find(g => g.name === activeProfessionFilter.value)
+  if (group) return group.professionals.length
+  return filteredPros.value.length
+})
+
+function clearProfessionFilter() {
+  selectedProfession.value = 'all'
+  filterCategoryLocal.value = ''
+}
 
 function goBack() {
   if (window.history.length > 1) {
@@ -207,7 +217,7 @@ function viewProfile(pro: Professional) {
                 <Briefcase class="w-4 h-4" :style="{ color: mainCategory.color }" />
                 <span>
                   <strong class="text-[var(--text-primary)]">{{ visibleCategoryPros.length }}</strong>
-                  <template v-if="(filterUf || filterCity) && visibleCategoryPros.length !== totalWithoutFilter">
+                  <template v-if="(localUf || localCity) && visibleCategoryPros.length !== totalWithoutFilter">
                     de {{ totalWithoutFilter }} profissionais
                   </template>
                   <template v-else>profissionais cadastrados</template>
@@ -234,31 +244,25 @@ function viewProfile(pro: Professional) {
       <section class="mb-10">
         <h2 class="text-lg font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
           <Award class="w-5 h-5" :style="{ color: mainCategory.color }" />
-          Profissões desta categoria
+          Profissão selecionada
         </h2>
         <div class="flex flex-wrap gap-2">
-          <button
-            @click="selectedProfession = 'all'; filterCategoryLocal = ''"
-            class="px-4 py-2 rounded-full text-sm font-semibold transition-all"
-            :class="selectedProfession === 'all' && !filterCategoryLocal
-              ? 'text-[var(--text-on-accent)]'
-              : 'bg-[var(--bg-raised)] border border-[var(--border-default)] text-[var(--text-secondary)] hover:border-[var(--border-raised)]'"
-            :style="selectedProfession === 'all' && !filterCategoryLocal ? { background: mainCategory.color } : {}"
+          <span
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold text-[var(--text-on-accent)]"
+            :style="{ background: mainCategory.color }"
           >
-            Todas ({{ visibleCategoryPros.length }})
-          </button>
-          <button
-            v-for="group in availableProfessions"
-            :key="group.name"
-            @click="selectedProfession = group.name; filterCategoryLocal = group.name"
-            class="px-4 py-2 rounded-full text-sm font-medium transition-all"
-            :class="selectedProfession === group.name || filterCategoryLocal === group.name
-              ? 'text-[var(--text-on-accent)]'
-              : 'bg-[var(--bg-raised)] border border-[var(--border-default)] text-[var(--text-secondary)] hover:border-[var(--border-raised)]'"
-            :style="selectedProfession === group.name || filterCategoryLocal === group.name ? { background: mainCategory.color } : {}"
-          >
-            {{ group.name }} ({{ group.professionals.length }})
-          </button>
+            {{ activeProfessionFilter ?? `Todas (${visibleCategoryPros.length})` }}
+            <template v-if="activeProfessionFilter">
+              ({{ activeProfessionCount }})
+              <button
+                @click="clearProfessionFilter()"
+                class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-black/20 hover:bg-black/30 transition-colors"
+                title="Limpar filtro"
+              >
+                <X class="w-3 h-3" />
+              </button>
+            </template>
+          </span>
         </div>
       </section>
 
@@ -364,6 +368,7 @@ function viewProfile(pro: Professional) {
               >
                 <div class="flex items-center gap-1.5">
                   <button
+                    v-if="podeContato(pro)"
                     @click.stop
                     class="p-2 rounded-lg bg-[var(--bg-raised)] border border-[var(--border-default)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--border-raised)] transition-colors"
                     title="Mensagem"
@@ -371,6 +376,7 @@ function viewProfile(pro: Professional) {
                     <MessageCircle class="w-4 h-4" />
                   </button>
                   <button
+                    v-if="podeContato(pro)"
                     @click.stop
                     class="p-2 rounded-lg bg-[var(--bg-raised)] border border-[var(--border-default)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--border-raised)] transition-colors"
                     title="Ligar"
@@ -399,7 +405,7 @@ function viewProfile(pro: Professional) {
           <Users class="w-8 h-8 text-[var(--text-subtle)]" />
         </div>
         <h3 class="text-lg font-semibold text-[var(--text-primary)] mb-2">
-          <template v-if="filterUf || filterCity">
+          <template v-if="localUf || localCity">
             Nenhum profissional nesta localização
           </template>
           <template v-else>
@@ -407,7 +413,7 @@ function viewProfile(pro: Professional) {
           </template>
         </h3>
         <p class="text-[var(--text-muted)] max-w-md mx-auto mb-6">
-          <template v-if="filterUf || filterCity">
+          <template v-if="localUf || localCity">
             Não encontramos profissionais de <strong>{{ mainCategory.name }}</strong> para esta região. Tente outro estado ou município.
           </template>
           <template v-else>
@@ -415,8 +421,8 @@ function viewProfile(pro: Professional) {
           </template>
         </p>
         <button
-          v-if="filterUf || filterCity"
-          @click="emit('clearFilters')"
+          v-if="localUf || localCity"
+          @click="localUf = null; localCity = null; localSearchTerm = ''; filterCategoryLocal = ''; selectedProfession = 'all'"
           class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold"
           :style="{ background: mainCategory.color + '18', color: mainCategory.color }"
         >

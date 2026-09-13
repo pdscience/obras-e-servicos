@@ -99,16 +99,6 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
-    path: '/como-funciona',
-    name: 'how-it-works',
-    component: () => import('@/pages/HowItWorksPage.vue'),
-  },
-  {
-    path: '/planos',
-    name: 'planos',
-    component: () => import('@/pages/PlanosPage.vue'),
-  },
-  {
     path: '/perguntas-frequentes',
     name: 'faq',
     component: () => import('@/pages/FaqPage.vue'),

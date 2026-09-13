@@ -1,6 +1,6 @@
 export type UserTipo = 'usuario' | 'profissional' | 'lojista'
 export type UserStatus = 'ativo' | 'inativo' | 'bloqueado'
-export type Page = 'home' | 'profile' | 'login' | 'register' | 'register-professional' | 'dashboard' | 'categories' | 'how-it-works' | 'lojista' | 'category-detail'
+export type Page = 'home' | 'profile' | 'login' | 'register' | 'register-professional' | 'dashboard' | 'categories' | 'lojista' | 'category-detail'
 
 export interface Usuario {
   id: string

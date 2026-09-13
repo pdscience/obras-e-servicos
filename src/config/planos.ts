@@ -108,7 +108,7 @@ export function planoPorId(id: PlanoProfissional): PlanoConfig {
   return PLANOS[id]
 }
 
-export const DIAS_PERIODO_GRATIS = 60
+export const DIAS_PERIODO_GRATIS = 30
 
 export function verificarPeriodoGratis(dataInicioGratis: string | null | undefined): {
   emGratis: boolean
@@ -132,8 +132,7 @@ export function verificarPeriodoGratis(dataInicioGratis: string | null | undefin
   return { emGratis, diasRestantes, dataExpiracao: expiracao }
 }
 
-export function obterPlanoEficaz(
-  premiumPlano: PlanoProfissional | null | undefined,
+export function obterPlanoEficaz(  premiumPlano: PlanoProfissional | null | undefined,
   _premium: boolean | undefined,
   dataInicioGratis: string | null | undefined
 ): { plano: PlanoProfissional; isGratis: boolean; diasRestantes: number } {
@@ -144,6 +143,16 @@ export function obterPlanoEficaz(
   }
   
   return { plano: premiumPlano ?? 'bronze', isGratis: false, diasRestantes: 0 }
+}
+
+// Regra pós-trial: só recebe orçamentos e exibe contato quem está no
+// período gratuito OU tem plano pago ativo (flag premium do webhook).
+export function podeAtuarProfissional(
+  premium: boolean | undefined,
+  dataInicioGratis: string | null | undefined
+): boolean {
+  if (premium === true) return true
+  return verificarPeriodoGratis(dataInicioGratis).emGratis
 }
 
 export const CORES_PLANO: Record<string, { from: string; to: string; badge: string; ring: string; text: string }> = {

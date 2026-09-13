@@ -5,7 +5,8 @@ import HomeHero from '@/components/home/HomeHero.vue'
 import HomeAboutIntro from '@/components/home/HomeAboutIntro.vue'
 import HomeHowItWorks from '@/components/home/HomeHowItWorks.vue'
 import HomeProfessionalsGallery from '@/components/home/HomeProfessionalsGallery.vue'
-import HomeSearchSection from '@/components/home/HomeSearchSection.vue'
+// MÓDULO DESATIVADO TEMPORARIAMENTE — descomente para reativar a busca home
+// import HomeSearchSection from '@/components/home/HomeSearchSection.vue'
 import HomeReforma from '@/components/home/HomeReforma.vue'
 import HomeAboutCards from '@/components/home/HomeAboutCards.vue'
 import HomeCTABanner from '@/components/home/HomeCTABanner.vue'
@@ -35,10 +36,6 @@ function goCategories() {
   router.push({ name: 'categories' })
 }
 
-function goStores() {
-  router.push({ name: 'stores' })
-}
-
 function registerProfessional() {
   router.push({ name: 'register', query: { tipo: 'professional' } })
 }
@@ -48,21 +45,28 @@ function selectProfessional(label: string, slug: string) {
   router.push({ name: 'category-detail', params: { slug: slug || cat?.mainCategoryId || 'mc-1' } })
 }
 
-function handleSearch(type: 'profissional' | 'lojista', query: string, _uf: string, _city: string) {
-  if (type === 'lojista') {
-    goStores()
-    return
-  }
-  const cat = categories.find((c) => c.name.toLowerCase() === query.toLowerCase())
-  if (cat) {
-    router.push({ name: 'category-detail', params: { slug: cat.mainCategoryId } })
-  } else {
-    goCategories()
-  }
-}
+// MÓDULO HomeSearchSection DESATIVADO TEMPORARIAMENTE — descomente para reativar
+// function goStores() {
+//   router.push({ name: 'stores' })
+// }
+// function handleSearch(type: 'profissional' | 'lojista', query: string, _uf: string, _city: string) {
+//   if (type === 'lojista') {
+//     goStores()
+//     return
+//   }
+//   const cat = categories.find((c) => c.name.toLowerCase() === query.toLowerCase())
+//   if (cat) {
+//     router.push({ name: 'category-detail', params: { slug: cat.mainCategoryId } })
+//   } else {
+//     goCategories()
+//   }
+// }
 
 function scrollToSearch() {
-  document.getElementById('busca')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  // Original (reativar junto com HomeSearchSection):
+  // document.getElementById('busca')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  // Fallback enquanto o módulo está desativado:
+  goCategories()
 }
 
 function handleRegisterPlan(plano: PlanoProfissional) {
@@ -80,7 +84,8 @@ function handleRegisterPlan(plano: PlanoProfissional) {
     <HomeAboutIntro />
     <HomeHowItWorks />
     <HomeProfessionalsGallery @select="selectProfessional" @viewAll="goCategories" />
-    <HomeSearchSection @search="handleSearch" />
+    <!-- MÓDULO DESATIVADO TEMPORARIAMENTE — descomente para reativar a busca home -->
+    <!-- <HomeSearchSection @search="handleSearch" /> -->
     <HomeReforma @plan="scrollToSearch" />
     <HomeAboutCards />
     <HomeCTABanner @findPro="goCategories" @register="registerProfessional" />

@@ -45,7 +45,7 @@ const testimonials = [
 </script>
 
 <template>
-  <section ref="root" class="home-testimonials">
+  <section ref="root" class="home-testimonials" id="avaliacoes">
     <div class="home-testimonials__head" data-reveal>
       <h2 class="home-testimonials__title font-display">O que nossos usuários dizem</h2>
     </div>
