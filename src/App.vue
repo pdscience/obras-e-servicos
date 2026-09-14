@@ -17,6 +17,9 @@ const showHeaderFooter = computed(() => {
 
 const showSidebar = computed(() => showHeaderFooter.value && route.name !== 'home' && auth.isLoggedIn)
 
+// Rodapé visível apenas na página principal e com usuário deslogado
+const showFooter = computed(() => showHeaderFooter.value && route.name === 'home' && !auth.isLoggedIn)
+
 onMounted(() => {
   auth.ensureInitialized()
 })
@@ -33,7 +36,7 @@ onMounted(() => {
           <main class="app-shell-content">
             <RouterView />
           </main>
-          <Footer />
+          <Footer v-if="showFooter" />
         </div>
       </div>
     </template>
