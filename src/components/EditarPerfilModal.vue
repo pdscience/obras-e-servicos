@@ -135,10 +135,10 @@ function close() {
   <Teleport to="body">
     <div
       v-if="props.visible"
-      class="fixed inset-0 z-[80] flex items-center justify-center bg-black/60"
+      class="fixed inset-0 z-[80] flex justify-center overflow-y-auto bg-black/60 pt-22 pb-2"
       @click.self="close"
     >
-      <div class="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-xl p-6 w-full max-w-lg mx-4 shadow-2xl">
+      <div class="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-xl p-6 w-full max-w-lg mx-4 my-auto shadow-2xl">
         <div class="flex items-center justify-between mb-6">
           <h2 class="text-xl font-bold text-[var(--text-primary)]">Editar Perfil</h2>
           <button @click="close" class="p-1 hover:bg-[var(--border-default)] rounded-lg transition-colors text-[var(--text-muted)]">✕</button>

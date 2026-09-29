@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { Briefcase, MapPin, Clock, DollarSign, AlertCircle, Calendar, Search, X, User, FileText } from '@lucide/vue'
-import { listarServicosAbertos, aceitarServico, negociarServico, obterPerfilProfissional } from '../services/api'
+import { listarServicosAbertos, aceitarServico, negociarServico, obterPerfilProfissional, listarCategoriasProfissional, listarCategorias, listarTodasProfissoes } from '../services/api'
+import { construirMapaProfissaoCategoria, servicoPertenceAoProfissional } from '../utils/categorias'
 import { PLANOS, podeAtuarProfissional } from '../config/planos'
 import SolicitarOrcamentoModal from '@/components/SolicitarOrcamentoModal.vue'
 import type { ServiceRequest, PlanoProfissional } from '../types'
@@ -27,16 +28,26 @@ const error = ref<string | null>(null)
 const searchProfissao = ref('')
 const isProfessional = ref(false)
 const professionalCategory = ref('')
+const minhasCategorias = ref<Set<string>>(new Set())
+const profissaoParaCategoria = ref<Map<string, string>>(new Map())
 const hasPlan = ref(false)
 const profissionalPlano = ref<string | null>(null)
 
+// Profissionais veem apenas serviços das categorias/profissões que selecionaram
+const servicosDaMinhaCategoria = computed(() => {
+  if (!isProfessional.value) return servicos.value
+  return servicos.value.filter(s =>
+    servicoPertenceAoProfissional(s.categoria, minhasCategorias.value, profissaoParaCategoria.value)
+  )
+})
+
 const profissoes = computed(() => {
-  const profs = new Set(servicos.value.map(s => s.subcategoria).filter(Boolean) as string[])
+  const profs = new Set(servicosDaMinhaCategoria.value.map(s => s.subcategoria).filter(Boolean) as string[])
   return [...profs].sort()
 })
 
 const filteredServicos = computed(() => {
-  let result = servicos.value
+  let result = servicosDaMinhaCategoria.value
   if (searchProfissao.value) {
     result = result.filter(s => s.subcategoria === searchProfissao.value)
   }
@@ -85,14 +96,26 @@ async function carregar() {
         // Trial ativo OU plano pago: pode aceitar/negociar
         hasPlan.value = podeAtuarProfissional(perfil.premium, perfil.data_inicio_gratis)
         profissionalPlano.value = perfil.premium_plano || null
+
+        const [selecionadas, categorias, profissoesDoBanco] = await Promise.all([
+          listarCategoriasProfissional(perfil.id),
+          listarCategorias(),
+          listarTodasProfissoes()
+        ])
+        const set = new Set<string>()
+        if (perfil.categoria) set.add(perfil.categoria)
+        if (perfil.subcategoria) set.add(perfil.subcategoria)
+        for (const c of selecionadas) {
+          if (c.categoria_nome) set.add(c.categoria_nome)
+          if (c.profissao_nome) set.add(c.profissao_nome)
+        }
+        minhasCategorias.value = set
+        profissaoParaCategoria.value = construirMapaProfissaoCategoria(categorias, profissoesDoBanco)
       }
     }
-    
-    if (isProfessional.value && professionalCategory.value) {
-      servicos.value = await listarServicosAbertos({ categoria: professionalCategory.value })
-    } else {
-      servicos.value = await listarServicosAbertos()
-    }
+
+    // Carrega todos e filtra no cliente: serviço pode ser por profissão ou categoria
+    servicos.value = await listarServicosAbertos()
   } catch (e: unknown) {
     error.value = (e as Error).message || 'Erro ao carregar serviços'
   } finally {

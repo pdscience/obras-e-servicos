@@ -9,9 +9,10 @@ import {
   Search, MapPin, User, X, Shield
 } from '@lucide/vue'
 import insforge, { listarServicosDoProfissional, listarServicosAbertos, concluirServico, cancelarServico, negociarServico, obterPerfilProfissional, criarPerfilProfissional, atualizarPerfilProfissional, obterPerfilUsuario, atualizarPerfilUsuario, listarReviews, listarCategorias, listarTodasProfissoes, listarCategoriasProfissional, salvarCategoriasProfissional, uploadPortfolioImage } from '../services/api'
+import { construirMapaProfissaoCategoria, servicoPertenceAoProfissional } from '../utils/categorias'
 import { getCitiesByUf } from '../data/cities'
 import type { ServiceRequest, CategoriaDB, ProfissaoDB, ProfissionalCategoriaView, PlanoProfissional, PortfolioItem } from '../types'
-import { PLANOS_PROFISSIONAIS, limiteCategoriasPlano, limiteFotosPlano, PLANOS, obterPlanoEficaz, podeAtuarProfissional } from '../config/planos'
+import { PLANOS_PROFISSIONAIS, limiteCategoriasPlano, limiteFotosPlano, PLANOS, PLANO_PADRAO, obterPlanoEficaz } from '../config/planos'
 import { useAuthStore } from '../stores/auth'
 import { usePeriodoGratis } from '../composables/usePeriodoGratis'
 
@@ -51,6 +52,11 @@ const premiumDiasRestantes = computed(() => {
 const premiumExpirado = computed(() => {
   if (!proPremium.value || !proPremiumExpiracao.value) return false
   return new Date(proPremiumExpiracao.value) <= new Date()
+})
+
+const temPlano = computed(() => {
+  if (proPremium.value) return !premiumExpirado.value
+  return proPremiumPlano.value != null && proPremiumPlano.value !== PLANO_PADRAO
 })
 
 const editTelefone = ref('')
@@ -186,8 +192,11 @@ const planOptions = PLANOS_PROFISSIONAIS.map(p => ({
 
 const planoEficaz = computed(() => obterPlanoEficaz(proPremiumPlano.value, proPremium.value, proDataInicioGratis.value))
 
-// Pós-trial: só recebe/negocia orçamentos com trial ativo ou plano pago
-const podeReceberOrcamentos = computed(() => podeAtuarProfissional(proPremium.value && !premiumExpirado.value, proDataInicioGratis.value))
+// Último plano profissional vigente (hoje: Ouro). Quem já está nele não recebe opção de escolher.
+const planoTopo = PLANOS_PROFISSIONAIS[PLANOS_PROFISSIONAIS.length - 1].id
+const ehPlanoTopo = computed(() => planoEficaz.value.plano === planoTopo)
+
+// Negociação liberada: o botão Negociar sempre abre o fluxo com o cliente.
 
 const maxCategorias = computed(() => limiteCategoriasPlano(planoEficaz.value.plano))
 const podeAdicionar = computed(() => editCategorias.value.length < maxCategorias.value)
@@ -288,14 +297,35 @@ const ultimaReview = computed(() => {
 
 const searchCategoria = ref('')
 
+// Categorias/profissões que este profissional selecionou no perfil
+const minhasCategorias = computed(() => {
+  const set = new Set<string>()
+  if (proCategoria.value) set.add(proCategoria.value)
+  for (const c of editCategorias.value) {
+    if (c.categoria_nome) set.add(c.categoria_nome)
+    if (c.profissao_nome) set.add(c.profissao_nome)
+  }
+  return set
+})
+
+const profissaoParaCategoria = computed(() =>
+  construirMapaProfissaoCategoria(categoriasDB.value, profissoesDB.value)
+)
+
+const servicosDaMinhaCategoria = computed(() =>
+  servicosAbertos.value.filter(s =>
+    servicoPertenceAoProfissional(s.categoria, minhasCategorias.value, profissaoParaCategoria.value)
+  )
+)
+
 const categorias = computed(() => {
-  const cats = new Set(servicosAbertos.value.map(s => s.categoria))
+  const cats = new Set(servicosDaMinhaCategoria.value.map(s => s.categoria))
   return [...cats].sort()
 })
 
 const servicosAbertosFiltrados = computed(() => {
-  if (!searchCategoria.value) return servicosAbertos.value
-  return servicosAbertos.value.filter(s => s.categoria === searchCategoria.value)
+  if (!searchCategoria.value) return servicosDaMinhaCategoria.value
+  return servicosDaMinhaCategoria.value.filter(s => s.categoria === searchCategoria.value)
 })
 
 const urgenciaLabel = (u: string) => {
@@ -408,11 +438,6 @@ async function handleCancelar(servicoId: string) {
 }
 
 function abrirNegociacao(servicoId: string) {
-  // Sem trial ativo e sem plano pago: direciona para upgrade
-  if (!podeReceberOrcamentos.value) {
-    showPlansModal.value = true
-    return
-  }
   servicoParaNegociar.value = servicoId
   whatsappModal.value = true
 }
@@ -425,6 +450,12 @@ function abrirDetalhes(servico: ServiceRequest) {
 function fecharDetalhes() {
   showDetalhesModal.value = false
   servicoDetalhes.value = null
+}
+
+function negociarAPartirDetalhes() {
+  const id = servicoDetalhes.value?.id
+  fecharDetalhes()
+  if (id) abrirNegociacao(id)
 }
 
 async function handleNegociar() {
@@ -700,20 +731,20 @@ onMounted(() => {
             </div>
           </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div class="lg:col-span-2 bg-[var(--bg-card)] border border-[var(--border-default)] rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden">
             <div class="p-5 border-b border-[var(--border-default)] flex items-center gap-3">
               <div class="w-9 h-9 rounded-xl bg-[color-mix(in_srgb,var(--accent-gold)_12%,transparent)] flex items-center justify-center shrink-0">
                 <Search class="w-4.5 h-4.5 text-[var(--accent-gold)]" />
               </div>
               <h2 class="font-semibold text-[var(--text-secondary)]">Serviços Disponíveis</h2>
-              <span class="ml-auto px-2.5 py-0.5 text-xs font-semibold rounded-full" style="background: color-mix(in srgb, var(--accent-gold) 12%, transparent); color: var(--accent-gold);">{{ servicosAbertos.length }} abertos</span>
+              <span class="ml-auto px-2.5 py-0.5 text-xs font-semibold rounded-full" style="background: color-mix(in srgb, var(--accent-gold) 12%, transparent); color: var(--accent-gold);">{{ servicosDaMinhaCategoria.length }} abertos</span>
             </div>
             <div class="p-5 space-y-3">
-              <div v-if="servicosAbertos.length === 0" class="text-center py-4 border border-dashed border-[var(--border-raised)] rounded-xl bg-[var(--bg-raised)]/40">
+              <div v-if="servicosDaMinhaCategoria.length === 0" class="text-center py-4 border border-dashed border-[var(--border-raised)] rounded-xl bg-[var(--bg-raised)]/40">
                 <p class="text-[var(--text-subtle)] text-sm">Nenhum serviço disponível no momento</p>
               </div>
-              <div v-for="servico in servicosAbertos.slice(0, 3)" :key="servico.id" class="flex items-start gap-3 p-3 bg-[var(--bg-raised)] rounded-xl border border-[var(--border-default)] hover:border-[var(--accent-gold)]/40 hover:shadow-md hover:-translate-y-0.5 transition-all">
+              <div v-for="servico in servicosDaMinhaCategoria.slice(0, 3)" :key="servico.id" class="flex items-start gap-3 p-3 bg-[var(--bg-raised)] rounded-xl border border-[var(--border-default)] hover:border-[var(--accent-gold)]/40 hover:shadow-md hover:-translate-y-0.5 transition-all">
                 <div class="w-10 h-10 bg-[color-mix(in srgb,var(--accent-gold) 10%,transparent)] rounded-lg flex items-center justify-center flex-shrink-0">
                   <Briefcase class="w-5 h-5 text-[var(--accent-gold)]" />
                 </div>
@@ -730,7 +761,7 @@ onMounted(() => {
             </div>
           </div>
 
-          <div class="lg:col-span-1 space-y-6">
+          <div class="space-y-6">
             <div class="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden">
               <div class="p-5 border-b border-[var(--border-default)] flex items-center gap-3">
                 <div class="w-9 h-9 rounded-xl bg-[color-mix(in_srgb,var(--accent-gold)_12%,transparent)] flex items-center justify-center shrink-0">
@@ -895,7 +926,7 @@ onMounted(() => {
               </select>
             </div>
           </div>
-          <div v-if="!servicosAbertos || servicosAbertos.length === 0" class="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-2xl p-12 text-center">
+          <div v-if="servicosDaMinhaCategoria.length === 0" class="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-2xl p-12 text-center">
             <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[var(--bg-raised)] flex items-center justify-center">
               <Briefcase class="w-8 h-8 text-[var(--text-subtle)]" />
             </div>
@@ -1140,6 +1171,31 @@ onMounted(() => {
                 </div>
               </div>
 
+              <!-- Profissões Card -->
+              <div v-if="proProfissoes.length > 0" class="w-full">
+                <div class="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-2xl p-6">
+                  <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--accent-gold)]/20 to-[var(--accent-gold)]/5 flex items-center justify-center ring-1 ring-[var(--accent-gold)]/15">
+                      <Briefcase class="w-5 h-5 text-[var(--accent-gold)]" />
+                    </div>
+                    <div>
+                      <h3 class="font-semibold text-[var(--text-primary)]">Profissões</h3>
+                      <p class="text-xs text-[var(--text-muted)]">Especialidades cadastradas</p>
+                    </div>
+                  </div>
+                  <div class="flex flex-wrap gap-2">
+                    <span
+                      v-for="(prof, index) in proProfissoes"
+                      :key="index"
+                      class="inline-flex items-center gap-1.5 px-4 py-2 bg-[var(--bg-raised)] border border-[var(--border-raised)] rounded-xl text-sm font-medium text-[var(--accent-gold)] hover:border-[var(--accent-gold)]/50 transition-colors"
+                    >
+                      <Shield class="w-3.5 h-3.5" />
+                      {{ prof }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <h3 class="font-semibold text-[var(--text-secondary)] mb-4">
                   Portfólio
@@ -1192,7 +1248,7 @@ onMounted(() => {
 
               <hr class="border-[var(--border-default)]" />
 
-              <div>
+              <div v-if="emPeriodoGratis || ehPlanoTopo || temPlano || periodoGratisExpirado">
                 <h3 class="font-semibold text-[var(--text-secondary)] mb-3">Plano</h3>
                 <!-- Período Gratuito Ativo -->
                 <div v-if="emPeriodoGratis" class="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-4 text-white mb-3">
@@ -1214,6 +1270,24 @@ onMounted(() => {
                     </div>
                   </div>
                 </div>
+                <!-- Plano no Topo (Ouro) -->
+                <div v-else-if="ehPlanoTopo" class="bg-[color-mix(in srgb,var(--accent-green) 10%,transparent)] border border-[color-mix(in_srgb,var(--accent-gold)_27%,transparent)] rounded-xl p-4 mb-3">
+                  <div class="flex items-center gap-2 mb-1">
+                    <Crown class="w-5 h-5 text-[var(--accent-green)]" />
+                    <span class="font-semibold text-[var(--text-primary)]">{{ PLANOS[planoEficaz.plano].nome }}</span>
+                  </div>
+                  <p class="text-[var(--text-muted)] text-sm">Você já é usuário {{ PLANOS[planoEficaz.plano].nome }} — último plano vigente.</p>
+                  <p v-if="premiumDiasRestantes > 0" class="text-[var(--text-muted)] text-sm">Restam {{ premiumDiasRestantes }} dias.</p>
+                </div>
+                <!-- Plano Pago Ativo abaixo do topo -->
+                <div v-else-if="temPlano" class="bg-[color-mix(in srgb,var(--accent-green) 10%,transparent)] border border-[color-mix(in_srgb,var(--accent-gold)_27%,transparent)] rounded-xl p-4 mb-3">
+                  <div class="flex items-center gap-2 mb-1">
+                    <Crown class="w-5 h-5 text-[var(--accent-green)]" />
+                    <span class="font-semibold text-[var(--text-primary)]">{{ PLANOS[planoEficaz.plano].nome }}</span>
+                  </div>
+                  <p v-if="premiumDiasRestantes > 0" class="text-[var(--text-muted)] text-sm">Restam {{ premiumDiasRestantes }} dias — seu perfil está em destaque.</p>
+                  <p v-else class="text-[var(--text-muted)] text-sm">Plano ativo — seu perfil está em destaque.</p>
+                </div>
                 <!-- Período Gratuito Expirado -->
                 <div v-else-if="periodoGratisExpirado" class="bg-gradient-to-r from-orange-500 to-red-500 rounded-xl p-4 text-white mb-3">
                   <div class="flex items-center gap-2 mb-1">
@@ -1222,24 +1296,6 @@ onMounted(() => {
                   </div>
                   <p class="text-white/80 text-sm mb-3">Seu período de 30 dias gratuitos expirou. Escolha um plano para voltar a receber orçamentos e continuar com destaque.</p>
                   <button @click="showPlansModal = true" class="px-4 py-2 bg-white text-orange-600 font-semibold rounded-lg text-sm hover:bg-gray-100 transition-colors">Escolher Plano</button>
-                </div>
-                <!-- Plano Pago Ativo -->
-                <div v-if="proPremium && !premiumExpirado && !emPeriodoGratis" class="bg-[color-mix(in srgb,var(--accent-green) 10%,transparent)] border border-[color-mix(in_srgb,var(--accent-gold)_27%,transparent)] rounded-xl p-4">
-                  <div class="flex items-center gap-2 mb-1">
-                    <Crown class="w-5 h-5 text-[var(--accent-green)]" />
-                    <span class="font-semibold text-[var(--text-primary)]">{{ PLANOS[planoEficaz.plano].nome }}</span>
-                  </div>
-                  <p v-if="premiumDiasRestantes > 0" class="text-[var(--text-muted)] text-sm">Restam {{ premiumDiasRestantes }} dias — seu perfil está em destaque.</p>
-                  <p v-else class="text-[var(--accent-red)] text-sm">Plano expirado. Renove agora.</p>
-                </div>
-                <!-- Gerenciar/Assinar Plano -->
-                <div v-if="!emPeriodoGratis" class="bg-[color-mix(in srgb,var(--accent-gold) 10%,transparent)] border border-[var(--accent-gold)] rounded-xl p-4" :class="{ 'mt-3': proPremium && !premiumExpirado }">
-                  <div class="flex items-center gap-2 mb-1">
-                    <Crown class="w-5 h-5 text-[var(--accent-gold)]" />
-                    <span class="font-semibold text-[var(--text-primary)]">{{ PLANOS[planoEficaz.plano].nome }}</span>
-                  </div>
-                  <p class="text-[var(--text-muted)] text-sm mb-3">{{ proPremium && !premiumExpirado ? 'Altere ou cancele seu plano quando quiser.' : 'Apareça em destaque e receba mais clientes.' }}</p>
-                  <button @click="showPlansModal = true" class="px-4 py-2 bg-gradient-to-r from-[var(--accent-gold)] to-[var(--accent-dark-gold)] text-[var(--text-on-accent)] font-semibold rounded-lg text-sm hover:shadow-lg transition-all">{{ proPremium && !premiumExpirado ? 'Ver Planos' : 'Tornar-se Premium' }}</button>
                 </div>
               </div>
             </div>
@@ -1271,6 +1327,47 @@ onMounted(() => {
             </div>
           </div>
 
+          <!-- Plano no Topo (Ouro) — já é usuário, sem opção de escolher -->
+          <div v-else-if="ehPlanoTopo" class="bg-[var(--accent-green)] rounded-2xl p-6 text-white">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                <Crown class="w-5 h-5" />
+              </div>
+              <div>
+                <h3 class="font-semibold">Plano {{ PLANOS[planoEficaz.plano].nome }}</h3>
+                <p class="text-white/70 text-xs">Você já é usuário {{ PLANOS[planoEficaz.plano].nome }} — último plano vigente.</p>
+              </div>
+            </div>
+            <div class="bg-white/10 rounded-xl p-4">
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-medium">Status</span>
+                <span v-if="premiumDiasRestantes > 0" class="text-sm font-bold">Restam {{ premiumDiasRestantes }} dias</span>
+                <span v-else class="text-sm font-bold">Plano ativo</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Plano Pago Ativo abaixo do topo — upgrade para o topo -->
+          <div v-else-if="temPlano" class="bg-[var(--accent-green)] rounded-2xl p-6 text-white">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                <Crown class="w-5 h-5" />
+              </div>
+              <div>
+                <h3 class="font-semibold">Plano {{ PLANOS[planoEficaz.plano].nome }}</h3>
+                <p class="text-white/70 text-xs">Seu perfil está em destaque!</p>
+              </div>
+            </div>
+            <div class="bg-white/10 rounded-xl p-4">
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-medium">Status</span>
+                <span v-if="premiumDiasRestantes > 0" class="text-sm font-bold">Restam {{ premiumDiasRestantes }} dias</span>
+                <span v-else class="text-sm font-bold">Plano ativo</span>
+              </div>
+            </div>
+            <button @click="showPlansModal = true" class="mt-3 w-full py-2.5 bg-white/15 hover:bg-white/25 text-white font-semibold rounded-xl text-sm transition-colors">Ver Planos</button>
+          </div>
+
           <!-- Período Gratuito Expirado -->
           <div v-else-if="periodoGratisExpirado" class="bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl p-6 text-white">
             <div class="flex items-center gap-3 mb-3">
@@ -1285,27 +1382,7 @@ onMounted(() => {
             <button @click="showPlansModal = true" class="w-full py-3 bg-white text-orange-600 font-semibold rounded-xl text-sm hover:bg-gray-100 transition-colors">Escolher Plano</button>
           </div>
 
-          <!-- Plano Pago Ativo -->
-          <div v-else-if="proPremium && !premiumExpirado" class="bg-[var(--accent-green)] rounded-2xl p-6 text-white">
-            <div class="flex items-center gap-3 mb-3">
-              <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                <Crown class="w-5 h-5" />
-              </div>
-              <div>
-                <h3 class="font-semibold">Plano {{ PLANOS[planoEficaz.plano].nome }}</h3>
-                <p class="text-white/70 text-xs">Seu perfil está em destaque!</p>
-              </div>
-            </div>
-            <div class="bg-white/10 rounded-xl p-4">
-              <div class="flex items-center justify-between">
-                <span class="text-sm font-medium">Status</span>
-                <span v-if="premiumDiasRestantes > 0" class="text-sm font-bold">Restam {{ premiumDiasRestantes }} dias</span>
-                <span v-else class="text-sm font-bold">Expirado</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Sem Plano / Plano Expirado -->
+          <!-- Abaixo do topo sem plano ativo — opção de upgrade -->
           <div v-else class="bg-[color-mix(in srgb,var(--accent-gold) 10%,transparent)] border border-[var(--accent-gold)] rounded-2xl p-6">
             <div class="flex items-center gap-3 mb-3">
               <div class="w-10 h-10 rounded-xl bg-[var(--accent-gold)]/20 flex items-center justify-center">
@@ -1320,30 +1397,6 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Profissões Card -->
-        <div v-if="activeTab === 'settings' && !loading && proProfissoes.length > 0" class="w-full mt-4">
-          <div class="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-2xl p-6">
-            <div class="flex items-center gap-3 mb-4">
-              <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--accent-gold)]/20 to-[var(--accent-gold)]/5 flex items-center justify-center ring-1 ring-[var(--accent-gold)]/15">
-                <Briefcase class="w-5 h-5 text-[var(--accent-gold)]" />
-              </div>
-              <div>
-                <h3 class="font-semibold text-[var(--text-primary)]">Profissões</h3>
-                <p class="text-xs text-[var(--text-muted)]">Especialidades cadastradas</p>
-              </div>
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <span
-                v-for="(prof, index) in proProfissoes"
-                :key="index"
-                class="inline-flex items-center gap-1.5 px-4 py-2 bg-[var(--bg-raised)] border border-[var(--border-raised)] rounded-xl text-sm font-medium text-[var(--accent-gold)] hover:border-[var(--accent-gold)]/50 transition-colors"
-              >
-                <Shield class="w-3.5 h-3.5" />
-                {{ prof }}
-              </span>
-            </div>
-          </div>
-        </div>
       </template>
     </main>
 
@@ -1498,7 +1551,7 @@ onMounted(() => {
       <div class="flex items-center justify-end gap-3 p-6 border-t border-[var(--border-default)]/60">
         <button @click="fecharDetalhes" class="px-4 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors">Fechar</button>
         <button
-          @click="fecharDetalhes(); abrirNegociacao(servicoDetalhes.id)"
+          @click="negociarAPartirDetalhes"
           class="inline-flex items-center gap-2 px-6 py-2.5 bg-[var(--accent-gold)] text-[var(--text-on-accent)] text-sm font-semibold rounded-xl hover:shadow-lg transition-all"
         >
           <MessageCircle class="w-4 h-4" />

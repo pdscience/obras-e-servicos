@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import {
   ClipboardList, Clock, CheckCircle2,
   User,
   Briefcase, DollarSign, ArrowRight,
-  MapPin, Calendar, MessageCircle, Star, X, Crown, AlertTriangle, ChevronDown
+  MapPin, Calendar, MessageCircle, Star, X, Crown, AlertTriangle, ChevronDown, Eye
 } from '@lucide/vue'
 import { listarServicosDoCliente, obterPerfilProfissionalPorId, obterPerfilUsuario, atualizarPerfilUsuario, atualizarStatusServico, criarReview, listarProfissionais, mapPerfilToProfessional, criarPerfilUsuario, listarTodasProfissoes } from '../services/api'
 import { getCitiesByUf } from '../data/cities'
@@ -189,8 +189,8 @@ function getProfissionalNome(profissionalId: string | null): string {
   return profissionaisAceitos.value[profissionalId]?.name ?? ''
 }
 
-async function carregar() {
-  loading.value = true
+async function carregar(silencioso = false) {
+  if (!silencioso) loading.value = true
   try {
     if (auth.user) {
       servicos.value = await listarServicosDoCliente(auth.user.id)
@@ -211,8 +211,28 @@ async function carregar() {
   } catch (e) {
     console.error('Erro ao carregar serviços:', e)
   } finally {
-    loading.value = false
+    if (!silencioso) loading.value = false
   }
+}
+
+// Atualização automática: o cliente vê a negociação do profissional na hora,
+// sem precisar recarregar a página.
+let atualizacaoTimer: ReturnType<typeof setInterval> | null = null
+
+function atualizarSilencioso() {
+  if (!document.hidden) carregar(true)
+}
+
+function iniciarAtualizacaoAutomatica() {
+  pararAtualizacaoAutomatica()
+  atualizacaoTimer = setInterval(atualizarSilencioso, 5000)
+  document.addEventListener('visibilitychange', atualizarSilencioso)
+}
+
+function pararAtualizacaoAutomatica() {
+  if (atualizacaoTimer) clearInterval(atualizacaoTimer)
+  atualizacaoTimer = null
+  document.removeEventListener('visibilitychange', atualizarSilencioso)
 }
 
 watch(() => auth.user, (newUser) => {
@@ -222,8 +242,13 @@ watch(() => auth.user, (newUser) => {
 onMounted(() => {
   carregar()
   carregarProfissionais()
+  iniciarAtualizacaoAutomatica()
   if (route.query.configurar) abrirEdicao()
   if (route.query.orcamento) abrirOrcamentoViaRota()
+})
+
+onUnmounted(() => {
+  pararAtualizacaoAutomatica()
 })
 
 watch(() => route.query.configurar, (v) => {
@@ -333,6 +358,25 @@ function pedirConfirmacaoCancelar(servicoId: string) {
   showCancelConfirm.value = true
 }
 
+const showDetalhesModal = ref(false)
+const servicoDetalhes = ref<ServiceRequest | null>(null)
+
+function abrirDetalhes(servico: ServiceRequest) {
+  servicoDetalhes.value = servico
+  showDetalhesModal.value = true
+}
+
+function fecharDetalhes() {
+  showDetalhesModal.value = false
+  servicoDetalhes.value = null
+}
+
+function cancelarAPartirDetalhes() {
+  const id = servicoDetalhes.value?.id
+  fecharDetalhes()
+  if (id) pedirConfirmacaoCancelar(id)
+}
+
 async function confirmarCancelar() {
   if (!cancelarServicoId.value) return
   await handleCancelarServico(cancelarServicoId.value)
@@ -385,18 +429,43 @@ function aoCriarPerfilProfissional() {
 <template>
   <div class="min-h-screen" style="background:var(--bg-page)">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div>
-          <h1 class="text-2xl font-bold text-[var(--text-primary)]">Área do Cliente</h1>
-          <p class="text-[var(--text-muted)]">{{ view === 'profissionais' ? 'Encontre profissionais disponíveis perto de você' : 'Acompanhe seus pedidos de orçamento' }}</p>
+      <div class="relative overflow-hidden rounded-2xl mb-6 p-6 md:p-8" style="background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-raised) 100%); border: 1px solid var(--border-default);">
+        <div class="absolute -top-16 -right-16 w-64 h-64 rounded-full blur-3xl opacity-20" style="background: var(--accent-gold);"></div>
+        <div class="absolute -bottom-20 -left-10 w-48 h-48 rounded-full blur-3xl opacity-10" style="background: var(--accent-teal);"></div>
+        <div class="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div class="flex items-center gap-4">
+            <div class="relative hidden sm:block">
+              <img
+                v-if="auth.user.avatar_url"
+                :src="auth.user.avatar_url"
+                :alt="auth.user.nome"
+                class="w-16 h-16 rounded-2xl object-cover ring-2 ring-[var(--accent-gold)] ring-offset-2 ring-offset-[var(--bg-card)]"
+              />
+              <div
+                v-else
+                class="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-bold text-white ring-2 ring-[var(--accent-gold)] ring-offset-2 ring-offset-[var(--bg-card)]"
+                style="background: linear-gradient(135deg, var(--accent-gold), var(--accent-dark-gold));"
+              >
+                {{ auth.user.nome?.charAt(0)?.toUpperCase() ?? 'U' }}
+              </div>
+            </div>
+            <div>
+              <div class="flex flex-wrap items-center gap-2 mb-1">
+                <h1 class="text-2xl md:text-3xl font-bold text-[var(--text-primary)]">Bem-vindo, {{ auth.user.nome?.split(' ')[0] ?? '' }}!</h1>
+              </div>
+              <p class="text-[var(--text-muted)]">{{ view === 'profissionais' ? 'Encontre profissionais disponíveis perto de você' : 'Acompanhe seus pedidos de orçamento' }}</p>
+            </div>
+          </div>
+          <div class="flex flex-col items-start sm:items-end gap-3">
+            <button
+              v-if="!auth.temPerfilProfissional"
+              @click="showTornarProfiModal = true"
+              class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[var(--accent-gold)]/40 text-[var(--accent-gold)] text-sm font-semibold hover:bg-[var(--accent-gold)] hover:text-[var(--text-on-accent)] transition-all whitespace-nowrap"
+            >
+              <Briefcase class="w-4 h-4" /> Quero ser profissional
+            </button>
+          </div>
         </div>
-        <button
-          v-if="!auth.temPerfilProfissional"
-          @click="showTornarProfiModal = true"
-          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[var(--accent-gold)]/40 text-[var(--accent-gold)] text-sm font-semibold hover:bg-[var(--accent-gold)] hover:text-[var(--text-on-accent)] transition-all whitespace-nowrap"
-        >
-          <Briefcase class="w-4 h-4" /> Quero ser profissional
-        </button>
       </div>
 
 <!-- Profissionais disponíveis (cards) -->
@@ -649,24 +718,6 @@ function aoCriarPerfilProfissional() {
                   <CheckCircle2 class="w-4 h-4" />
                   Marcar como Concluído
                 </button>
-                <button
-                  @click="pedirConfirmacaoCancelar(servico.id)"
-                  class="inline-flex items-center gap-2 px-4 py-2 bg-[var(--accent-red)]/10 text-[var(--accent-red)] text-sm rounded-xl font-semibold hover:bg-[var(--accent-red)]/20 active:scale-[0.98] transition-all duration-200"
-                >
-                  <X class="w-4 h-4" />
-                  Cancelar
-                </button>
-              </div>
-
-              <!-- Cancelar (solicitação ainda aberta) -->
-              <div v-else-if="servico.status === 'aberto'" class="mt-4 ml-12 flex items-center gap-3">
-                <button
-                  @click="pedirConfirmacaoCancelar(servico.id)"
-                  class="inline-flex items-center gap-2 px-4 py-2 bg-[var(--accent-red)]/10 text-[var(--accent-red)] text-sm rounded-xl font-semibold hover:bg-[var(--accent-red)]/20 active:scale-[0.98] transition-all duration-200"
-                >
-                  <X class="w-4 h-4" />
-                  Cancelar solicitação
-                </button>
               </div>
 
               <!-- Review Button -->
@@ -679,6 +730,25 @@ function aoCriarPerfilProfissional() {
                   Avaliar Serviço
                 </button>
               </div>
+            </div>
+
+            <!-- Ações do pedido -->
+            <div class="mt-4 pt-4 border-t border-[var(--border-default)]/60 flex items-center gap-3">
+              <button
+                @click="abrirDetalhes(servico)"
+                class="inline-flex items-center gap-2 px-4 py-2 bg-[var(--bg-raised)] border border-[var(--border-raised)] text-[var(--text-secondary)] text-sm rounded-xl font-semibold hover:border-[var(--accent-gold)]/50 hover:text-[var(--accent-gold)] active:scale-[0.98] transition-all duration-200"
+              >
+                <Eye class="w-4 h-4" />
+                Detalhes
+              </button>
+              <button
+                v-if="servico.status === 'aberto' || servico.status === 'em_andamento'"
+                @click="pedirConfirmacaoCancelar(servico.id)"
+                class="inline-flex items-center gap-2 px-4 py-2 bg-[var(--accent-red)]/10 text-[var(--accent-red)] text-sm rounded-xl font-semibold hover:bg-[var(--accent-red)]/20 active:scale-[0.98] transition-all duration-200"
+              >
+                <X class="w-4 h-4" />
+                Cancelar pedido
+              </button>
             </div>
           </div>
         </div>
@@ -797,6 +867,97 @@ function aoCriarPerfilProfissional() {
       </div>
     </div>
   </div>
+
+  <!-- Detalhes do Pedido -->
+  <Teleport to="body">
+    <div v-if="showDetalhesModal && servicoDetalhes" class="fixed inset-0 z-[60] flex items-center justify-center p-4" style="background: rgba(0,0,0,0.7)" @click.self="fecharDetalhes">
+      <div class="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div class="flex items-start justify-between gap-3 p-6 border-b border-[var(--border-default)]">
+          <div class="flex items-start gap-4 min-w-0">
+            <div class="w-12 h-12 bg-gradient-to-br from-[var(--accent-gold)]/15 to-[var(--accent-gold)]/5 rounded-xl flex items-center justify-center ring-1 ring-[var(--accent-gold)]/15 shrink-0">
+              <Briefcase class="w-6 h-6 text-[var(--accent-gold)]" />
+            </div>
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <h2 class="text-xl font-bold text-[var(--text-primary)] truncate">{{ servicoDetalhes.categoria }}</h2>
+                <span :class="['px-3 py-1 rounded-full text-xs font-semibold tracking-wide', getStatusBadge(servicoDetalhes.status).style]">{{ getStatusBadge(servicoDetalhes.status).label }}</span>
+                <span :class="['px-3 py-1 rounded-full text-xs font-semibold tracking-wide', getUrgenciaBadge(servicoDetalhes.urgencia).style]">{{ getUrgenciaBadge(servicoDetalhes.urgencia).label }}</span>
+              </div>
+              <p class="text-sm text-[var(--text-muted)] mt-0.5">Pedido #{{ servicoDetalhes.id.slice(0, 8) }}</p>
+            </div>
+          </div>
+          <button @click="fecharDetalhes" class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[var(--border-default)] transition-colors shrink-0">
+            <X class="w-5 h-5 text-[var(--text-muted)]" />
+          </button>
+        </div>
+
+        <div class="p-6 space-y-4">
+          <div class="bg-[var(--bg-raised)] rounded-xl p-4">
+            <p class="text-xs text-[var(--text-muted)] mb-1 font-medium uppercase tracking-wider">Descrição</p>
+            <p class="text-sm text-[var(--text-secondary)] leading-relaxed">{{ servicoDetalhes.descricao }}</p>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+            <div class="flex items-center gap-2 text-[var(--text-secondary)]">
+              <MapPin class="w-4 h-4 text-[var(--accent-gold)] shrink-0" /> {{ servicoDetalhes.endereco }}
+            </div>
+            <div class="flex items-center gap-2 text-[var(--text-secondary)]">
+              <Calendar class="w-4 h-4 text-[var(--accent-gold)] shrink-0" /> Criado em {{ new Date(servicoDetalhes.created_at).toLocaleDateString('pt-BR') }}
+            </div>
+            <div v-if="servicoDetalhes.data_preferida" class="flex items-center gap-2 text-[var(--text-secondary)]">
+              <Clock class="w-4 h-4 text-[var(--accent-gold)] shrink-0" /> Preferência: {{ new Date(servicoDetalhes.data_preferida).toLocaleDateString('pt-BR') }}
+            </div>
+            <div v-if="servicoDetalhes.orcamento" class="flex items-center gap-2 font-bold text-[var(--accent-green)]">
+              <DollarSign class="w-4 h-4 shrink-0" /> R$ {{ servicoDetalhes.orcamento.toLocaleString('pt-BR') }}
+            </div>
+            <div class="flex items-center gap-2 text-[var(--text-secondary)]">
+              <User class="w-4 h-4 text-[var(--accent-gold)] shrink-0" /> {{ servicoDetalhes.cliente_nome }}
+            </div>
+            <div class="flex items-center gap-2 text-[var(--text-secondary)]">
+              <MessageCircle class="w-4 h-4 text-[var(--accent-gold)] shrink-0" /> {{ servicoDetalhes.cliente_contato }}
+            </div>
+          </div>
+
+          <div v-if="servicoDetalhes.profissional_id || servicoDetalhes.whatsapp_profissional" class="bg-[var(--bg-raised)] rounded-xl p-4 flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--accent-green)]/20 to-[var(--accent-green)]/5 flex items-center justify-center ring-1 ring-[var(--accent-green)]/20">
+              <User class="w-4 h-4 text-[var(--accent-green)]" />
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm text-[var(--accent-green)] font-semibold">
+                {{ servicoDetalhes.status === 'concluido' ? 'Serviço concluído por' : servicoDetalhes.status === 'em_andamento' ? 'Profissional aceitou' : 'Aguardando resposta' }}
+              </p>
+              <p v-if="servicoDetalhes.profissional_id && getProfissionalNome(servicoDetalhes.profissional_id)" class="text-xs text-[var(--text-muted)] mt-0.5">{{ getProfissionalNome(servicoDetalhes.profissional_id) }}</p>
+            </div>
+            <a
+              v-if="servicoDetalhes.whatsapp_profissional && servicoDetalhes.status === 'em_andamento'"
+              :href="`https://wa.me/${servicoDetalhes.whatsapp_profissional}`"
+              target="_blank" rel="noopener noreferrer"
+              class="inline-flex items-center gap-2 px-3 py-1.5 bg-[var(--accent-green)]/10 text-[var(--accent-green)] text-xs font-medium rounded-lg hover:bg-[var(--accent-green)]/20 transition-colors"
+            >
+              <MessageCircle class="w-3.5 h-3.5" />
+              WhatsApp
+            </a>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 p-6 border-t border-[var(--border-default)]">
+          <button
+            v-if="servicoDetalhes.status === 'aberto' || servicoDetalhes.status === 'em_andamento'"
+            @click="cancelarAPartirDetalhes"
+            class="px-4 py-2.5 text-sm text-[var(--accent-red)] hover:bg-[var(--accent-red)]/10 rounded-xl font-semibold transition-colors"
+          >
+            Cancelar pedido
+          </button>
+          <button
+            @click="fecharDetalhes"
+            class="px-6 py-2.5 bg-[var(--bg-raised)] border border-[var(--border-default)] text-[var(--text-secondary)] text-sm font-semibold rounded-xl hover:border-[var(--accent-gold)] transition-colors"
+          >
+            Fechar
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 
   <!-- Confirmar Cancelamento -->
   <Teleport to="body">

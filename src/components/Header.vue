@@ -91,6 +91,8 @@ const bannerText = computed(() =>
           <img src="/assets/images/logo_os.png" alt="Logo OS - Obras & Serviços" class="home-header__logo-img" @error="(e) => { (e.target as HTMLImageElement).src = logoSrc }" />
         </button>
 
+        <div v-if="route.name === 'cliente-dashboard'" class="home-header__page-title">Área do Cliente</div>
+
         <div v-else-if="auth.currentMode === 'profissional'" class="home-header__evp">
           Escritório Virtual do Profissional <span class="home-header__evp-accent">– EVP</span>
         </div>
@@ -228,6 +230,7 @@ const bannerText = computed(() =>
 }
 
 .home-header__container {
+  position: relative;
   max-width: 1200px;
   margin: 0 auto;
   display: flex;
@@ -265,9 +268,13 @@ const bannerText = computed(() =>
 }
 
 .home-header__evp {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
   align-items: center;
-  font-size: 0.95rem;
+  font-size: clamp(1.05rem, 4vw, 1.35rem);
   font-weight: 700;
   color: #1a1a1a;
   letter-spacing: 0.02em;
@@ -277,6 +284,17 @@ const bannerText = computed(() =>
 .home-header__evp-accent {
   color: #d4a017;
   margin-left: 0.35rem;
+}
+
+.home-header__page-title {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: clamp(1.1rem, 4vw, 1.5rem);
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
 }
 
 .home-header__nav {
