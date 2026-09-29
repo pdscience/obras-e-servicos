@@ -193,7 +193,10 @@ export async function negociarServico(servicoId: string, profissionalId: string,
     .eq('id', servicoId)
     .select()
     .single()
-  if (error) throw new Error('Serviço não encontrado ou não está mais disponível')
+  if (error) {
+    console.error('[negociarServico] erro real:', error)
+    throw new Error('Serviço não encontrado ou não está mais disponível')
+  }
   return mapServico(data)
 }
 

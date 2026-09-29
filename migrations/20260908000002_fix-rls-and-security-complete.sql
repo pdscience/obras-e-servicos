@@ -78,25 +78,25 @@ DROP POLICY IF EXISTS "orcamentos_insert_own" ON orcamentos;
 DROP POLICY IF EXISTS "orcamentos_update_own" ON orcamentos;
 DROP POLICY IF EXISTS "orcamentos_delete_own" ON orcamentos;
 
--- Usuário só vê seus próprios orçamentos
+-- Usuário só vê seus próprios orçamentos (orcamentos.cliente_id é o dono)
 CREATE POLICY "orcamentos_select_own" ON orcamentos
   FOR SELECT
-  USING ((select auth.uid()) = usuario_id);
+  USING ((select auth.uid())::text = (cliente_id)::text);
 
 -- Usuário pode criar orçamentos para si mesmo
 CREATE POLICY "orcamentos_insert_own" ON orcamentos
   FOR INSERT
-  WITH CHECK ((select auth.uid()) = usuario_id);
+  WITH CHECK ((select auth.uid())::text = (cliente_id)::text);
 
 -- Usuário pode atualizar seus próprios orçamentos
 CREATE POLICY "orcamentos_update_own" ON orcamentos
   FOR UPDATE
-  USING ((select auth.uid()) = usuario_id);
+  USING ((select auth.uid())::text = (cliente_id)::text);
 
 -- Usuário pode deletar seus próprios orçamentos
 CREATE POLICY "orcamentos_delete_own" ON orcamentos
   FOR DELETE
-  USING ((select auth.uid()) = usuario_id);
+  USING ((select auth.uid())::text = (cliente_id)::text);
 
 
 -- =====================================================
@@ -119,9 +119,13 @@ CREATE POLICY "paginas_modify_admin" ON paginas
 
 
 -- Tabela servicos - corrigir políticas muito permissivas
+-- Obs: cliente_id/profissional_id são TEXT, então auth.uid() precisa de cast.
 DROP POLICY IF EXISTS "servicos_select_public" ON servicos;
+DROP POLICY IF EXISTS "servicos_select_own" ON servicos;
 DROP POLICY IF EXISTS "servicos_insert_public" ON servicos;
+DROP POLICY IF EXISTS "servicos_insert_authenticated" ON servicos;
 DROP POLICY IF EXISTS "servicos_update_own" ON servicos;
+DROP POLICY IF EXISTS "servicos_update_profissional" ON servicos;
 DROP POLICY IF EXISTS "servicos_delete_own" ON servicos;
 
 -- Serviços abertos são públicos para visualização
@@ -132,32 +136,31 @@ CREATE POLICY "servicos_select_public" ON servicos
 -- Usuário autenticado pode ver seus próprios serviços (qualquer status)
 CREATE POLICY "servicos_select_own" ON servicos
   FOR SELECT
-  USING ((select auth.uid()) IN (cliente_id, profissional_id));
-
--- Profissional pode ver serviços que aceitou
-CREATE POLICY "servicos_select_profissional" ON servicos
-  FOR SELECT
-  USING ((select auth.uid()) = profissional_id);
+  USING (
+    ((select auth.uid())::text = cliente_id)
+    OR ((select auth.uid())::text = profissional_id)
+  );
 
 -- Qualquer usuário autenticado pode criar serviço (precisa de cliente_id)
 CREATE POLICY "servicos_insert_authenticated" ON servicos
   FOR INSERT
-  WITH CHECK ((select auth.uid()) = cliente_id);
+  WITH CHECK ((select auth.uid())::text = cliente_id);
 
 -- Apenas profissional designado pode atualizar status
 CREATE POLICY "servicos_update_profissional" ON servicos
   FOR UPDATE
-  USING ((select auth.uid()) = profissional_id);
+  USING ((select auth.uid())::text = profissional_id);
 
 -- Apenas cliente pode deletar/cancelar seu próprio serviço
 CREATE POLICY "servicos_delete_own" ON servicos
   FOR DELETE
-  USING ((select auth.uid()) = cliente_id);
+  USING ((select auth.uid())::text = cliente_id);
 
 
 -- Tabela reviews - corrigir políticas muito permissivas
 DROP POLICY IF EXISTS "reviews_select_public" ON reviews;
 DROP POLICY IF EXISTS "reviews_insert_public" ON reviews;
+DROP POLICY IF EXISTS "reviews_insert_authenticated" ON reviews;
 DROP POLICY IF EXISTS "reviews_update_own" ON reviews;
 DROP POLICY IF EXISTS "reviews_delete_own" ON reviews;
 
@@ -172,17 +175,18 @@ CREATE POLICY "reviews_insert_authenticated" ON reviews
   WITH CHECK ((select auth.role()) = 'authenticated');
 
 -- Apenas autor pode atualizar sua review
+-- (reviews.profissional_id é TEXT, perfis_profissional.id é UUID)
 CREATE POLICY "reviews_update_own" ON reviews
   FOR UPDATE
   USING ((select auth.uid()) = (
-    SELECT usuario_id FROM perfis_profissional WHERE id = profissional_id
+    SELECT usuario_id FROM perfis_profissional WHERE (id)::text = profissional_id
   ));
 
 -- Apenas autor pode deletar sua review
 CREATE POLICY "reviews_delete_own" ON reviews
   FOR DELETE
   USING ((select auth.uid()) = (
-    SELECT usuario_id FROM perfis_profissional WHERE id = profissional_id
+    SELECT usuario_id FROM perfis_profissional WHERE (id)::text = profissional_id
   ));
 
 
@@ -329,8 +333,8 @@ $$;
 -- 5. ADICIONAR ÍNDICES FALTANTES (Performance)
 -- =====================================================
 
--- Índice para coluna usuario_id em produtos (usada em RLS)
-CREATE INDEX IF NOT EXISTS idx_produtos_usuario_id ON produtos(usuario_id);
+-- Índice para coluna lojista_id em produtos (usada em RLS)
+CREATE INDEX IF NOT EXISTS idx_produtos_lojista_id ON produtos(lojista_id);
 
 -- Índice para foreign keys frequentemente consultadas
 CREATE INDEX IF NOT EXISTS idx_servicos_cliente_id ON servicos(cliente_id);
