@@ -1,4 +1,7 @@
 <script setup lang="ts">
+// Formulário APENAS para o CLIENTE (Área do Cliente).
+// O perfil PROFISSIONAL usa outro formulário: DashboardPage > "Configurações do Perfil"
+// (campo "Nome do Perfil"), que alimenta o "Bem-vindo, <nome>!" do painel profissional.
 import { ref, watch } from 'vue'
 import { obterPerfilUsuario, atualizarPerfilUsuario } from '../services/api'
 import { ufs } from '../data/ufs'

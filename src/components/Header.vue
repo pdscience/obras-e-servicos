@@ -40,6 +40,14 @@ function navigateConfigurar() {
 
 function abrirEditarPerfil() {
   mobileMenuOpen.value = false
+  // Separação de formulários:
+  // - "Editar Perfil" (EditarPerfilModal) é apenas para o CLIENTE.
+  // - Perfil PROFISSIONAL é editado em Dashboard > Configurações do Perfil.
+  // Se estiver logado como profissional, vai para as Configurações do Perfil.
+  if (auth.currentMode === 'profissional') {
+    navigateSettings()
+    return
+  }
   showEditProfileModal.value = true
 }
 

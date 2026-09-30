@@ -355,10 +355,13 @@ async function carregar() {
   try {
     await carregarProfissoes()
     if (auth.user) {
-      editNome.value = auth.user.nome
       const perfil = await obterPerfilProfissional(auth.user.id)
       if (perfil) {
-        proNome.value = auth.user.nome ?? 'Profissional'
+        // Nome do Perfil profissional tem prioridade sobre o nome da conta.
+        // É este nome (input "Nome do Perfil") que aparece no "Bem-vindo".
+        const nomePerfil = (perfil.nome as string | null | undefined)?.trim() || auth.user.nome || 'Profissional'
+        proNome.value = nomePerfil
+        editNome.value = nomePerfil
         proAvatar.value = auth.user.avatar_url ?? ''
         proCategoria.value = perfil.categoria
         proPremium.value = perfil.premium
@@ -391,6 +394,10 @@ async function carregar() {
         editPrecoHora.value = perfil.preco_hora ?? 0
         editPrecoM2.value = perfil.preco_m2 ?? 0
         editDisponivel.value = perfil.disponivel ?? true
+      } else {
+        // Sem perfil profissional ainda: usa o nome da conta.
+        proNome.value = auth.user.nome || 'Profissional'
+        editNome.value = auth.user.nome || ''
       }
       const perfilUsuario = await obterPerfilUsuario(auth.user.id)
       if (perfilUsuario) {
@@ -483,6 +490,15 @@ const whatsappNumber = ref('')
 
 const editNome = ref('')
 const saving = ref(false)
+
+// Nome exibido no "Bem-vindo": reflete ao vivo o que está digitado
+// no input "Nome do Perfil" (Configurações do Perfil / perfil profissional).
+// Se o input estiver vazio, cai para o nome salvo do perfil profissional.
+const nomeBoasVindas = computed(() => {
+  const digitado = editNome.value?.trim()
+  if (digitado) return digitado
+  return proNome.value || auth.user?.nome || 'Profissional'
+})
 
 async function salvarPerfil() {
   if (!editNome.value.trim()) return
@@ -678,7 +694,7 @@ onMounted(() => {
             </div>
             <div>
               <div class="flex flex-wrap items-center gap-2 mb-1">
-                <h1 class="text-2xl md:text-3xl font-bold text-[var(--text-primary)]">Bem-vindo, {{ pro.name.split(' ')[0] }}!</h1>
+                <h1 class="text-2xl md:text-3xl font-bold text-[var(--text-primary)]">Bem-vindo, {{ nomeBoasVindas.split(' ')[0] }}!</h1>
                 <template v-if="emPeriodoGratis">
                   <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold" style="background: color-mix(in srgb, var(--accent-green) 15%, transparent); color: var(--accent-green);"><Crown class="w-3 h-3" /> Período Gratuito</span>
                 </template>
