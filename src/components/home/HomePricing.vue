@@ -2,14 +2,12 @@
 import { ref } from 'vue'
 import { useScrollReveal } from '@/composables/useScrollReveal'
 import { PLANOS_LISTA } from '@/config/planos'
+import type { PlanoProfissional } from '@/types'
 
 const root = ref<HTMLElement | null>(null)
 useScrollReveal(root)
 
-// ASSINATURAS DESATIVADAS TEMPORARIAMENTE — para reativar, descomente:
-// import type { PlanoProfissional } from '@/types'
-// const emit = defineEmits<{ selectPlan: [plano: PlanoProfissional] }>()
-// e no botão "Assinar": @click="emit('selectPlan', plano.id)" (remover `disabled`)
+const emit = defineEmits<{ selectPlan: [plano: PlanoProfissional] }>()
 
 const planImages: Record<string, string> = {
   bronze: '/assets/images/bronze.png',
@@ -66,7 +64,7 @@ function formatPrice(preco: number) {
               </li>
             </ul>
 
-            <button class="pricing-card__btn" disabled title="Assinaturas em breve">
+            <button class="pricing-card__btn" @click="emit('selectPlan', plano.id)">
               Assinar {{ plano.nome }}
             </button>
           </article>

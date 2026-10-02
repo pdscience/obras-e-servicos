@@ -104,6 +104,11 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/FaqPage.vue'),
   },
   {
+    path: '/pagamento/:resultado(sucesso|cancelado|expirado)',
+    name: 'pagamento-retorno',
+    component: () => import('@/pages/PagamentoRetorno.vue'),
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     redirect: '/',

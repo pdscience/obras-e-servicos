@@ -14,9 +14,37 @@ import {
   mapLojistaToPerfil, mapProdutoToProduto
 } from '../services/api'
 import insforge from '../services/api'
+import { iniciarCheckoutAsaas } from '../services/assinaturas'
+import { PLANOS } from '../config/planos'
 import type { PerfilLojista, Produto } from '../types'
 
 defineEmits<{ back: [] }>()
+
+const planoDiamante = PLANOS.diamante
+const assinando = ref(false)
+const assinaturaMsg = ref('')
+
+async function assinarDiamante() {
+  if (!lojistaId.value || !auth.user) return
+  assinando.value = true
+  assinaturaMsg.value = ''
+  try {
+    await iniciarCheckoutAsaas({
+      perfilId: lojistaId.value,
+      plano: 'diamante',
+      tipoPerfil: 'lojista',
+      usuarioId: auth.user.id,
+      nome: loja.value?.nome || auth.user.nome,
+      email: loja.value?.email || auth.user.email,
+      telefone: loja.value?.telefone_comercial || undefined,
+    })
+    assinaturaMsg.value = 'Abrimos a página segura de pagamento (Asaas) em nova aba...'
+  } catch (e: unknown) {
+    assinaturaMsg.value = 'Não foi possível iniciar o pagamento: ' + ((e as Error)?.message || 'Tente novamente.')
+  } finally {
+    assinando.value = false
+  }
+}
 
 const auth = useAuthStore()
 const loading = ref(true)
@@ -328,6 +356,21 @@ function removerImagem(idx: number) {
       <div v-if="loading" class="text-center py-16">
         <div class="w-8 h-8 border-2 border-[var(--accent-gold)] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
         <p class="text-[var(--text-muted)]">Carregando...</p>
+      </div>
+
+      <div v-else-if="loja && !loja.premium" class="mb-6 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center gap-4 shadow-lg">
+        <div class="flex-1">
+          <p class="text-white font-bold text-lg">Plano {{ planoDiamante.nome }} — R$ {{ planoDiamante.preco.toFixed(2).replace('.', ',') }}/mês</p>
+          <p class="text-white/80 text-sm mt-1">Vitrine de produtos, banner promocional e leads de obras. Pagamento seguro via Asaas (Pix ou cartão).</p>
+          <p v-if="assinaturaMsg" class="text-white/90 text-sm mt-2">{{ assinaturaMsg }}</p>
+        </div>
+        <button
+          @click="assinarDiamante"
+          :disabled="assinando"
+          class="px-6 py-3 bg-white text-emerald-700 font-bold rounded-xl text-sm hover:bg-emerald-50 transition-colors disabled:opacity-60 shrink-0"
+        >
+          {{ assinando ? 'Gerando...' : 'Assinar Diamante' }}
+        </button>
       </div>
 
       <template v-else-if="activeTab === 'criar'">

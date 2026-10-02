@@ -14,6 +14,7 @@ import { getCitiesByUf } from '../data/cities'
 import type { ServiceRequest, CategoriaDB, ProfissaoDB, ProfissionalCategoriaView, PlanoProfissional, PortfolioItem } from '../types'
 import { PLANOS_PROFISSIONAIS, limiteCategoriasPlano, limiteFotosPlano, PLANOS, PLANO_PADRAO, obterPlanoEficaz } from '../config/planos'
 import { useAuthStore } from '../stores/auth'
+import { iniciarCheckoutAsaas } from '../services/assinaturas'
 import { usePeriodoGratis } from '../composables/usePeriodoGratis'
 
 defineEmits<{ back: [] }>()
@@ -605,18 +606,16 @@ async function handleUpgrade(plano: PlanoProfissional) {
   if (!proId.value) return
   loading.value = true
   try {
-    const { data, error } = await insforge.functions.invoke('criar-pagamento', {
-      body: { perfil_id: proId.value, plano },
+    await iniciarCheckoutAsaas({
+      perfilId: proId.value,
+      plano,
+      tipoPerfil: 'profissional',
+      usuarioId: auth.user?.id,
+      nome: proNome.value || auth.user?.nome,
+      email: auth.user?.email,
     })
-    if (error) throw new Error(error.message)
-    const url = (data as { checkout_url?: string })?.checkout_url
-    if (url) {
-      window.open(url, '_blank')
-      notificarSucesso('Redirecionando para a página segura de pagamento...')
-      showPlansModal.value = false
-    } else {
-      notificarErro('O checkout para este plano está em integração. Por favor, contate o suporte.')
-    }
+    notificarSucesso('Abrimos a página segura de pagamento (Asaas) em nova aba...')
+    showPlansModal.value = false
   } catch (err: any) {
     console.error('Erro ao gerar pagamento:', err)
     notificarErro('Não foi possível iniciar o pagamento: ' + (err?.message || 'Tente novamente.'))
@@ -1455,7 +1454,7 @@ onMounted(() => {
             </button>
           </div>
 
-          <p class="text-center text-[var(--text-subtle)] text-xs mt-4">Pagamento seguro via Mercado Pago. Cancele quando quiser.</p>
+          <p class="text-center text-[var(--text-subtle)] text-xs mt-4">Pagamento seguro via Asaas (Pix ou cartão). Cancele quando quiser.</p>
         </div>
       </div>
     </Teleport>
